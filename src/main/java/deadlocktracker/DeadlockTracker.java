@@ -38,7 +38,8 @@ import javaparser.*;
  *
  * @author RonanLana
  */
-public class DeadlockTracker {
+@Mojo(name = "execute")
+public class DeadlockTracker extends AbstractMojo {
 
     private static void parseJavaFile(String fileName, DeadlockReader listener) {
         try {
@@ -126,12 +127,9 @@ public class DeadlockTracker {
         
     }
     
-    @Mojo(name = "DeadlockTracker")
-    public class DeadlockTrackerMojo extends AbstractMojo {
-        @Override
-        public void execute() throws MojoExecutionException {
-            executeDeadlockTracker();
-        }
+    @Override
+    public void execute() throws MojoExecutionException {
+        executeDeadlockTracker();
     }
     
     public static void main(String[] args) {

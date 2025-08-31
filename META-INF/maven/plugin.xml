@@ -1,0 +1,13 @@
+<plugin>
+  <name>DeadlockTracker</name>
+  <description>Java project skimmer to detect deadlocks.</description>
+  <groupId>ronancpl</groupId>
+  <artifactId>DeadlockTracker</artifactId>
+  <version>1.0.0</version>
+  
+  <mojos>
+    <mojo>
+      <goal>execute</goal>
+    </mojo>
+  </mojos>
+</plugin>

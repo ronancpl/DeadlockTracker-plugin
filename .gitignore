@@ -1,9 +1,8 @@
-# Netbeans project files
-dist/
-build/
-build.xml
-manifest.mf
-nbproject/
+# Eclipse project files
+.mvn/
+.settings/
+.classpath
+.project
 
 # Compiled class file
 *.class
