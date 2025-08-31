@@ -1,4 +1,4 @@
-# MapleDeadlockTracker
+# DeadlockTracker - Plugin
 
 **Head developer**: Ronan C. P. Lana
 
@@ -17,4 +17,4 @@ Contents such as code entry points and source directory (and subdirectories) to 
 ## Observations
 
 * This program does a static review over the source code. Object interactions are not treated dynamically, here.
-* Script calls are noted as potential deadlock issuers if not treated properly. That so, the program informs when a given script handler (e.g., Invocable) runs scripts holding locks.
+* Script calls are noted as potential deadlock issuers if not treated properly. That so, the plugin informs when a given script handler (e.g., Invocable) runs scripts holding locks.
