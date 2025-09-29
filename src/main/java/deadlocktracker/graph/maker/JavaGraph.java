@@ -1,7 +1,9 @@
 package deadlocktracker.graph.maker;
 
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -10,6 +12,8 @@ import deadlocktracker.DeadlockGraphMaker;
 import deadlocktracker.containers.DeadlockClass;
 import deadlocktracker.containers.DeadlockFunction;
 import deadlocktracker.containers.DeadlockStorage;
+import deadlocktracker.containers.Pair;
+import deadlocktracker.graph.DeadlockAbstractType;
 import deadlocktracker.graph.DeadlockGraphMethod;
 import language.java.JavaParser;
 
@@ -18,6 +22,102 @@ import language.java.JavaParser;
  * @author RonanLana
  */
 public class JavaGraph extends DeadlockGraphMaker {
+	
+	@Override
+	public Integer getLiteralType(ParserRuleContext ctx) {
+		JavaParser.LiteralContext elemCtx = (JavaParser.LiteralContext) ctx;
+		
+        if(elemCtx.integerLiteral() != null) return ElementalTypes[0];
+        if(elemCtx.floatLiteral() != null) return ElementalTypes[1];
+        if(elemCtx.CHAR_LITERAL() != null) return ElementalTypes[2];
+        if(elemCtx.STRING_LITERAL() != null) return ElementalTypes[3];
+        if(elemCtx.BOOL_LITERAL() != null) return ElementalTypes[4];
+        if(elemCtx.NULL_LITERAL() != null) return ElementalTypes[7];
+        
+        return -1;
+    }
+	
+	@Override
+	public List<ParserRuleContext> getArgumentList(ParserRuleContext ctx) {
+		JavaParser.ExpressionListContext expList = (JavaParser.ExpressionListContext) ctx;
+		
+        List<ParserRuleContext> ret = new LinkedList<>();
+        if(expList != null) {
+            for(ParserRuleContext exp : expList.expression()) {
+            	ret.add(exp);
+            }
+        }
+        
+        return ret;
+	}
+	
+    private Integer getPrimitiveType(JavaParser.PrimitiveTypeContext ctx) {
+        if(ctx.INT() != null || ctx.SHORT() != null || ctx.LONG() != null || ctx.BYTE() != null) return ElementalTypes[0];
+        if(ctx.FLOAT() != null || ctx.DOUBLE() != null) return ElementalTypes[1];
+        if(ctx.CHAR() != null) return ElementalTypes[2];
+        if(ctx.BOOLEAN() != null) return ElementalTypes[4];
+        
+        return -2;
+    }
+    
+	@Override
+	public Set<Integer> getMethodReturnType(DeadlockGraphMethod node, Integer classType, ParserRuleContext methodCallCtx, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
+        Set<Integer> retTypes = new HashSet<>();
+        
+        if(classType == -2) {
+            retTypes.add(-2);
+            return retTypes;
+        }
+        
+        JavaParser.MethodCallContext methodCall = (JavaParser.MethodCallContext) methodCallCtx;
+        
+        //System.out.println("CALL METHODRETURNTYPE for " + classType + " methodcall " + methodCall.getText());
+        List<Integer> argTypes = getArgumentTypes(node, methodCall.expressionList(), sourceMethod, sourceClass);
+        String methodName = methodCall.IDENTIFIER().getText();
+        
+        if(!ReflectedClasses.containsKey(classType)) {
+            DeadlockAbstractType absType = AbstractDataTypes.get(classType);
+            if(absType != null) {
+                Integer ret = evaluateAbstractFunction(node, methodName, argTypes, classType, absType);
+                retTypes.add(ret);
+                
+                //if(ret == -1 && absType != DeadlockAbstractType.LOCK) System.out.println("SOMETHING OUT OF CALL FOR " + methodCall.IDENTIFIER().getText() + " ON " + absType /*+ dataNames.get(expType)*/);
+                return retTypes;
+            } else {
+                retTypes = getReturnType(node, methodName, classType, argTypes, methodCall);
+                if(retTypes.contains(-1)) {
+                    retTypes.remove(-1);
+                    retTypes.add(getPreparedReturnType(methodName, classType)); // test for common function names widely used, regardless of data type
+                }
+
+                return retTypes;
+            }
+        } else {
+            // follows the return-type pattern for the reflected classes, that returns an specific type if a method name has been recognized, returns the default otherwise
+            Pair<Integer, Map<String, Integer>> reflectedData = ReflectedClasses.get(classType);
+            
+            if(methodName.contentEquals("toString")) {
+                retTypes.add(ElementalTypes[3]);
+            } else {
+                DeadlockAbstractType absType = AbstractDataTypes.get(classType);
+                if(absType != null) {
+                    if (absType == DeadlockAbstractType.LOCK || absType == DeadlockAbstractType.SCRIPT) {
+                        Integer ret = evaluateAbstractFunction(node, methodName, argTypes, classType, absType);
+                        retTypes.add(ret);
+
+                        //if(ret == -1 && absType != DeadlockAbstractType.LOCK) System.out.println("SOMETHING OUT OF CALL FOR " + methodCall.IDENTIFIER().getText() + " ON " + absType /*+ dataNames.get(expType)*/);
+                        return retTypes;
+                    }
+                }
+                
+                Integer ret = reflectedData.right.get(methodName);
+                if(ret == null) ret = reflectedData.left;
+                retTypes.add(ret);
+            }
+        }
+        
+        return retTypes;
+    }
 	
 	@Override
 	public Set<Integer> parseMethodCalls(DeadlockGraphMethod node, ParserRuleContext callCtx, DeadlockFunction sourceMethod, DeadlockClass sourceClass, boolean filter) {
@@ -67,7 +167,7 @@ public class JavaGraph extends DeadlockGraphMaker {
                                                 c = getClassFromType(cTypes.get(cTypes.size() - 1));
 
                                                 if(c == null) {
-                                                    //System.out.println("GFAILED @ " + cTypes.get(cTypes.size() - 1));
+                                                    //System.out.println("Compound FAILED @ " + cTypes.get(cTypes.size() - 1));
                                                 } else {
                                                     templateTypes = c.getMaskedTypeSet();
                                                 }

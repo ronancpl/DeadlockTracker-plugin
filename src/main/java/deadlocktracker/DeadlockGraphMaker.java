@@ -81,16 +81,17 @@ public abstract class DeadlockGraphMaker {
     private Integer runningFid = 0;
     private Integer lockId;
     
+    public abstract Integer getLiteralType(ParserRuleContext ctx);
+    public abstract List<ParserRuleContext> getArgumentList(ParserRuleContext ctx);
+    public abstract Set<Integer> getMethodReturnType(DeadlockGraphMethod node, Integer classType, ParserRuleContext methodCall, DeadlockFunction sourceMethod, DeadlockClass sourceClass);
     public abstract Set<Integer> parseMethodCalls(DeadlockGraphMethod node, ParserRuleContext callCtx, DeadlockFunction sourceMethod, DeadlockClass sourceClass, boolean filter);	
 	public abstract String parseMethodName(ParserRuleContext callCtx);
     
-    protected List<Integer> getArgumentTypes(DeadlockGraphMethod node, JavaParser.ExpressionListContext expList, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
+    protected List<Integer> getArgumentTypes(DeadlockGraphMethod node, ParserRuleContext expList, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
         List<Integer> ret = new LinkedList<>();
-        if(expList != null) {
-            for(ParserRuleContext exp : expList.expression()) {
-                for (Integer argType : parseMethodCalls(node, exp, sourceMethod, sourceClass)) {
-                    ret.add((argType != -1 && !argType.equals(ElementalTypes[7])) ? argType : -2);  // make accept any non-determined argument-type
-                }
+        for(ParserRuleContext exp : getArgumentList(expList)) {
+            for (Integer argType : parseMethodCalls(node, exp, sourceMethod, sourceClass)) {
+                ret.add((argType != -1 && !argType.equals(ElementalTypes[7])) ? argType : -2);  // make accept any non-determined argument-type
             }
         }
         
@@ -135,7 +136,7 @@ public abstract class DeadlockGraphMaker {
         return -2;
     }
     
-    private Integer evaluateAbstractFunction(DeadlockGraphMethod node, String methodName, List<Integer> argTypes, Integer dataType, DeadlockAbstractType absType) {
+    protected Integer evaluateAbstractFunction(DeadlockGraphMethod node, String methodName, List<Integer> argTypes, Integer dataType, DeadlockAbstractType absType) {
         switch(absType) {
             case MAP:
                 if(methodName.contentEquals("entrySet")) {
@@ -356,17 +357,6 @@ public abstract class DeadlockGraphMaker {
         return retType;
     }
     
-    protected Integer getLiteralType(JavaParser.LiteralContext ctx) {
-        if(ctx.integerLiteral() != null) return ElementalTypes[0];
-        if(ctx.floatLiteral() != null) return ElementalTypes[1];
-        if(ctx.CHAR_LITERAL() != null) return ElementalTypes[2];
-        if(ctx.STRING_LITERAL() != null) return ElementalTypes[3];
-        if(ctx.BOOL_LITERAL() != null) return ElementalTypes[4];
-        if(ctx.NULL_LITERAL() != null) return ElementalTypes[7];
-        
-        return -1;
-    }
-    
     private Pair<DeadlockFunction, Set<Integer>> getMethodDefinitionFromClass(DeadlockClass c, String method, List<Integer> argTypes) {
         DeadlockFunction mdf = c.getMethod(false, method, argTypes);
         if(mdf != null) {
@@ -519,7 +509,7 @@ public abstract class DeadlockGraphMaker {
         return new Pair<>(retMethod, implementedFunctions);
     }
     
-    private Set<Integer> getReturnType(DeadlockGraphMethod node, String method, Integer expType, List<Integer> argTypes, JavaParser.MethodCallContext methodCall) {
+    protected Set<Integer> getReturnType(DeadlockGraphMethod node, String method, Integer expType, List<Integer> argTypes, ParserRuleContext methodCall) {
         Set<Integer> ret = new HashSet<>();
         DeadlockClass c = getClassFromType(expType);
         
@@ -628,7 +618,7 @@ public abstract class DeadlockGraphMaker {
         return ret;
     }
     
-    private Integer getPreparedReturnType(String methodName, Integer thisType) {
+    protected Integer getPreparedReturnType(String methodName, Integer thisType) {
         switch(methodName) {
             case "isEmpty":
             case "equals":
@@ -673,72 +663,7 @@ public abstract class DeadlockGraphMaker {
                 return -1;
         }
     }
-    
-    protected Set<Integer> getMethodReturnType(DeadlockGraphMethod node, Integer classType, JavaParser.MethodCallContext methodCall, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
-        Set<Integer> retTypes = new HashSet<>();
         
-        if(classType == -2) {
-            retTypes.add(-2);
-            return retTypes;
-        }
-        
-        //System.out.println("CALL METHODRETURNTYPE for " + classType + " methodcall " + methodCall.getText());
-        List<Integer> argTypes = getArgumentTypes(node, methodCall.expressionList(), sourceMethod, sourceClass);
-        String methodName = methodCall.IDENTIFIER().getText();
-        
-        if(!ReflectedClasses.containsKey(classType)) {
-            DeadlockAbstractType absType = AbstractDataTypes.get(classType);
-            if(absType != null) {
-                Integer ret = evaluateAbstractFunction(node, methodName, argTypes, classType, absType);
-                retTypes.add(ret);
-                
-                //if(ret == -1 && absType != DeadlockAbstractType.LOCK) System.out.println("SOMETHING OUT OF CALL FOR " + methodCall.IDENTIFIER().getText() + " ON " + absType /*+ dataNames.get(expType)*/);
-                return retTypes;
-            } else {
-                retTypes = getReturnType(node, methodName, classType, argTypes, methodCall);
-                if(retTypes.contains(-1)) {
-                    retTypes.remove(-1);
-                    retTypes.add(getPreparedReturnType(methodName, classType)); // test for common function names widely used, regardless of data type
-                }
-
-                return retTypes;
-            }
-        } else {
-            // follows the return-type pattern for the reflected classes, that returns an specific type if a method name has been recognized, returns the default otherwise
-            Pair<Integer, Map<String, Integer>> reflectedData = ReflectedClasses.get(classType);
-            
-            if(methodName.contentEquals("toString")) {
-                retTypes.add(ElementalTypes[3]);
-            } else {
-                DeadlockAbstractType absType = AbstractDataTypes.get(classType);
-                if(absType != null) {
-                    if (absType == DeadlockAbstractType.LOCK || absType == DeadlockAbstractType.SCRIPT) {
-                        Integer ret = evaluateAbstractFunction(node, methodName, argTypes, classType, absType);
-                        retTypes.add(ret);
-
-                        //if(ret == -1 && absType != DeadlockAbstractType.LOCK) System.out.println("SOMETHING OUT OF CALL FOR " + methodCall.IDENTIFIER().getText() + " ON " + absType /*+ dataNames.get(expType)*/);
-                        return retTypes;
-                    }
-                }
-                
-                Integer ret = reflectedData.right.get(methodName);
-                if(ret == null) ret = reflectedData.left;
-                retTypes.add(ret);
-            }
-        }
-        
-        return retTypes;
-    }
-    
-    protected Integer getPrimitiveType(JavaParser.PrimitiveTypeContext ctx) {
-        if(ctx.INT() != null || ctx.SHORT() != null || ctx.LONG() != null || ctx.BYTE() != null) return ElementalTypes[0];
-        if(ctx.FLOAT() != null || ctx.DOUBLE() != null) return ElementalTypes[1];
-        if(ctx.CHAR() != null) return ElementalTypes[2];
-        if(ctx.BOOLEAN() != null) return ElementalTypes[4];
-        
-        return -2;
-    }
-    
     protected Integer getDereferencedType(String derTypeName, DeadlockClass derClass) {
         Integer derType = DereferencedDataTypes.get(derTypeName);
         if(derType != null) return derType;
