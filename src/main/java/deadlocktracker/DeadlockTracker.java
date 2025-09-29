@@ -21,6 +21,8 @@ import org.antlr.v4.runtime.tree.*;
 import deadlocktracker.containers.DeadlockEntry;
 import deadlocktracker.containers.DeadlockLock;
 import deadlocktracker.containers.DeadlockStorage;
+import deadlocktracker.source.JavaReader;
+import deadlocktracker.graph.maker.JavaGraph;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -31,8 +33,7 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 
-import javalexer.*;
-import javaparser.*;
+import language.java.*;
 
 /**
  *
@@ -41,7 +42,7 @@ import javaparser.*;
 @Mojo(name = "execute")
 public class DeadlockTracker extends AbstractMojo {
 
-    private static void parseJavaFile(String fileName, DeadlockReader listener) {
+    private static void parseJavaFile(String fileName, JavaReader listener) {
         try {
             JavaLexer lexer = new JavaLexer(CharStreams.fromFileName(fileName));
             CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
@@ -76,7 +77,7 @@ public class DeadlockTracker extends AbstractMojo {
         List<String> fileNames = new ArrayList<>();
         listJavaFiles(directoryName, fileNames);
         
-        DeadlockReader reader = new DeadlockReader();
+        JavaReader reader = new JavaReader();
         
         for(String fName : fileNames) {
             System.out.println("Parsing '" + fName + "'");
@@ -84,7 +85,7 @@ public class DeadlockTracker extends AbstractMojo {
         }
         System.out.println("Project file reading complete!\n");
         
-        return DeadlockReader.compileProjectData();     // finally, updates the storage table with relevant associations
+        return JavaReader.compileProjectData();     // finally, updates the storage table with relevant associations
     }
     
     private static void loadPropertiesFile() {
@@ -99,10 +100,10 @@ public class DeadlockTracker extends AbstractMojo {
         DeadlockConfig.loadProperties(prop);
     }
     
-    private static Map<Integer, String> getGraphLockNames() {
+    private static Map<Integer, String> getGraphLockNames(DeadlockGraphMaker g) {
         Map<Integer, String> r = new HashMap<>();
         
-        Map<String, DeadlockLock> m = DeadlockGraphMaker.getGraphLocks();
+        Map<String, DeadlockLock> m = g.getGraphLocks();
         for (Entry<String, DeadlockLock> em : m.entrySet()) {
             if(em.getValue() != null) r.put(em.getValue().getId(), em.getKey());
         }
@@ -113,13 +114,15 @@ public class DeadlockTracker extends AbstractMojo {
     private static void executeDeadlockTracker() {
         loadPropertiesFile();
         
+        JavaGraph g = new JavaGraph();
+        
         DeadlockStorage md = parseJavaProject(DeadlockConfig.getProperty("src_folder"));
         System.out.println("Project parse complete!\n");
         
-        DeadlockGraph mdg = DeadlockGraphMaker.generateSourceGraph(md);
+        DeadlockGraph mdg = g.generateSourceGraph(md);
         System.out.println("Project graph generated!\n");
         
-        Map<Integer, String> r = getGraphLockNames();
+        Map<Integer, String> r = getGraphLockNames(g);
         Set<DeadlockEntry> mds = new DeadlockGraphCruiser().runSourceGraph(mdg, r);
         DeadlockGraphResult.reportDeadlocks(mds, r);
         

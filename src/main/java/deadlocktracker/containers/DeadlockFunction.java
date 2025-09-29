@@ -16,9 +16,10 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Map.Entry;
+
+import org.antlr.v4.runtime.ParserRuleContext;
+
 import java.util.Set;
-import javaparser.JavaParser;
 
 /**
  *
@@ -47,7 +48,7 @@ public class DeadlockFunction {
     private Map<Long, String> localVarNames = new HashMap();
     private Map<Long, Integer> paramVars;
     
-    private List<JavaParser.ExpressionContext> methodCalls = new LinkedList<>();   // starts off as a string representing the call, after the source readings it will be parsed
+    private List<ParserRuleContext> methodCalls = new LinkedList<>();   // starts off as a string representing the call, after the source readings it will be parsed
     
     private List<Integer> paramTypes;
     private Integer returnType;
@@ -135,16 +136,16 @@ public class DeadlockFunction {
         return paramVars;
     }
     
-    public void addMethodCall(JavaParser.ExpressionContext methodCall) {
+    public void addMethodCall(ParserRuleContext methodCall) {
         methodCalls.add(methodCall);
     }
     
-    public void setSynchronizedModifier(JavaParser.ExpressionContext lockCall, JavaParser.ExpressionContext unlockCall) {
+    public void setSynchronizedModifier(ParserRuleContext lockCall, ParserRuleContext unlockCall) {
         methodCalls.add(unlockCall);
         methodCalls.add(0, lockCall);
     }
     
-    public List<JavaParser.ExpressionContext> getMethodCalls() {
+    public List<ParserRuleContext> getMethodCalls() {
         return methodCalls;
     }
     
@@ -309,7 +310,7 @@ public class DeadlockFunction {
         s += "\n\t\t\t";
         */
         
-        for(JavaParser.ExpressionContext e : methodCalls) {
+        for(ParserRuleContext e : methodCalls) {
             s += (e.getText() + ", ");
         }
         
