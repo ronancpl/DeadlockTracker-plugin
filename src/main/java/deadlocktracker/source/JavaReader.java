@@ -9,7 +9,7 @@
     work, under the same license. Copyright and license notices must be preserved. Contributors
     provide an express grant of patent rights.
 */
-package deadlocktracker;
+package deadlocktracker.source;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,9 +21,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicInteger;
-import javalexer.JavaLexer;
-import javaparser.JavaParser;
-import javaparser.JavaParserBaseListener;
+
+import language.java.JavaLexer;
+import language.java.JavaParser;
+import language.java.JavaParserBaseListener;
 import deadlocktracker.containers.DeadlockClass;
 import deadlocktracker.containers.DeadlockClass.DeadlockClassType;
 import deadlocktracker.containers.DeadlockEnum;
@@ -43,7 +44,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
  *
  * @author RonanLana
  */
-public class DeadlockReader extends JavaParserBaseListener {
+public class JavaReader extends JavaParserBaseListener {
     private static DeadlockStorage storage = new DeadlockStorage();
     private static String syncLockTypeName = "SyncLock";
     
