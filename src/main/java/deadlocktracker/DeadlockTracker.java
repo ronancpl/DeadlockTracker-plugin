@@ -123,7 +123,10 @@ public class DeadlockTracker extends AbstractMojo {
         DeadlockGraphMaker g = DeadlockConfig.getGraphMakerFromProperty(("language"));
         ParseTreeListener l = DeadlockConfig.getSourceParserFromProperty(("language"));
         
-        DeadlockStorage md = parseSourceProject(DeadlockConfig.getProperty("src_folder"), g, l);
+        String directoryName = DeadlockConfig.getProperty("src_folder");
+        if (l instanceof CSharpReader) ((CSharpReader) l).setSourceDirPrefixPath(directoryName);
+        
+        DeadlockStorage md = parseSourceProject(directoryName, g, l);
         System.out.println("Project parse complete!\n");
         
         DeadlockGraph mdg = g.generateSourceGraph(md);

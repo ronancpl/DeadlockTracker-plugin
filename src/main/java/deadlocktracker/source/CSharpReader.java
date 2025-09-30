@@ -93,6 +93,7 @@ public class CSharpReader extends CSharpParserBaseListener {
     private static Map<Integer, String> LinkedDataNames = new HashMap();
     
     private static List<String> currentImportList = new ArrayList<>();
+    private static String sourceDirPrefixPath;
     private static String currentPackageName;
     private static String currentCompleteFileClassName;
     private static DeadlockClass currentClass = null;
@@ -102,32 +103,60 @@ public class CSharpReader extends CSharpParserBaseListener {
     private static Map<Integer, Pair<DeadlockClass, Integer>> volatileMaskedTypes = new HashMap<>();
     private static Map<Integer, Pair<String, String>> volatileDataTypes = new HashMap<>();  // cannot recover the import classes at the first parsing, so the type definition comes at the second rundown
     
+    public void setSourceDirPrefixPath(String sourceDirPath) {
+        sourceDirPath = sourceDirPath.trim().toLowerCase();
+        sourceDirPath = sourceDirPath.replace('\\', '/');
+        
+        int i = sourceDirPath.lastIndexOf('.') - 1;
+        if (i < 0) i = sourceDirPath.length();
+        
+        while (i >= 0) {
+            switch (sourceDirPath.charAt(i)) {
+                case '.':
+                    sourceDirPrefixPath = sourceDirPath.substring(sourceDirPath.indexOf("/", i) + 1) + "/";
+                    i = -1;
+                    break;
+                    
+                default:
+            }
+            
+            i--;
+        }
+    }
+    
     public void setPackageNameFromFilePath(String fileName) {
     	String str = new String(fileName);
-    	str.replace('\\', '/');
+    	str = str.replace('\\', '/');
     	
 		int idx = str.lastIndexOf("/");
 		if (idx > -1) {
 			str = str.substring(0, idx + 1);			
 		}
-		
-		str.replace('/', '.');
-		
+	
+        idx = str.toLowerCase().indexOf(sourceDirPrefixPath);
+        str = str.substring(idx + sourceDirPrefixPath.length());
+        str = str.replace('/', '.');
+        
         currentPackageName = str;
     }
     
     @Override
     public void enterCompilation_unit(CSharpParser.Compilation_unitContext ctx) {
+        DeadlockFunction method = new DeadlockFunction("_global", null, null, currentAbstract);
+        methodStack.add(method);
+        
         currentImportList.clear();
     }
     
     @Override
     public void enterUsing_directives(CSharpParser.Using_directivesContext ctx) {
         for (CSharpParser.Using_directiveContext ctxd : ctx.using_directive()) {
-        	CSharpParser.UsingAliasDirectiveContext ctxa = (CSharpParser.UsingAliasDirectiveContext) ctxd;
+            if (ctxd instanceof CSharpParser.UsingAliasDirectiveContext) {
+                CSharpParser.UsingAliasDirectiveContext ctxa = (CSharpParser.UsingAliasDirectiveContext) ctxd;
         	
     		String s = ctxa.namespace_or_type_name().getText();
-            currentImportList.add(s);	
+                currentImportList.add(s);
+            }
     	}
     }
     
@@ -386,12 +415,12 @@ public class CSharpReader extends CSharpParserBaseListener {
     	for (String name : list) {
     		path += name + ".";
     	}
-    	path.substring(0, path.length() - 1);
+    	if (!path.isEmpty()) path = path.substring(0, path.length() - 1);
     	
     	ret.add(path);
     	ret.add(methodName);
     	
-    	return list;
+    	return ret;
     }
     
     private void enterMethodDeclaration(List<String> list, CSharpParser.Method_declarationContext ctx) {
@@ -483,7 +512,7 @@ public class CSharpReader extends CSharpParserBaseListener {
     @Override
     public void exitConstructor_declaration(CSharpParser.Constructor_declarationContext ctx) {
         DeadlockFunction method = methodStack.pop();
-        currentClass.addClassMethod(method);
+        if (currentClass != null) currentClass.addClassMethod(method);
     }
     
     @Override
@@ -512,16 +541,20 @@ public class CSharpReader extends CSharpParserBaseListener {
     
     @Override
     public void enterLocal_variable_declaration(CSharpParser.Local_variable_declarationContext ctx) {
-        processLocalVariableDeclaratorId(ctx.local_variable_type().getText(), ctx.local_variable_declarator().get(ctx.local_variable_declarator().size() - 1).identifier().getText(), methodStack.peek());
+        if (ctx.local_variable_declarator() != null) {
+            processLocalVariableDeclaratorId(ctx.local_variable_type().getText(), ctx.local_variable_declarator().get(ctx.local_variable_declarator().size() - 1).identifier().getText(), methodStack.peek());
+        }
     }
     
     @Override
     public void enterSpecific_catch_clause(CSharpParser.Specific_catch_clauseContext ctx) {
-        processLocalVariableDeclaratorId("Exception", ctx.identifier().getText(), methodStack.peek());
+        if (ctx.identifier() != null) {
+            processLocalVariableDeclaratorId("Exception", ctx.identifier().getText(), methodStack.peek());
+        }
     }
     
     private void enterElementValuePair(String elementName, String value) {
-        String lockName = currentPackageName + currentClass.getPathName() + "." + elementName;
+        String lockName = currentPackageName + (currentClass != null ? currentClass.getPathName() + ".": "") + elementName;
                 
         if(!readLockWaitingSet.isEmpty() || !writeLockWaitingSet.isEmpty()) {
             if(readLockWaitingSet.contains(lockName)) {
@@ -534,17 +567,17 @@ public class CSharpReader extends CSharpParserBaseListener {
     
     @Override
     public void enterEnum_member_declaration(CSharpParser.Enum_member_declarationContext ctx) {
-		enterElementValuePair(ctx.identifier().IDENTIFIER().getText(), ctx.expression().getChild(0).getText());
+		enterElementValuePair(ctx.identifier().IDENTIFIER().getText(), ctx.identifier().IDENTIFIER().getText());
     }
     
     @Override
     public void enterArg_declaration(CSharpParser.Arg_declarationContext ctx) {
-    	enterElementValuePair(ctx.identifier().IDENTIFIER().getText(), ctx.expression().getChild(0).getText());
+    	enterElementValuePair(ctx.identifier().IDENTIFIER().getText(), ctx.identifier().IDENTIFIER().getText());
     }
     
     @Override
     public void enterConstant_declarator(CSharpParser.Constant_declaratorContext ctx) {
-    	enterElementValuePair(ctx.identifier().IDENTIFIER().getText(), ctx.expression().getChild(0).getText());
+    	enterElementValuePair(ctx.identifier().IDENTIFIER().getText(), ctx.identifier().IDENTIFIER().getText());
     }
     
     @Override
@@ -664,11 +697,13 @@ public class CSharpReader extends CSharpParserBaseListener {
     }
     
     private static void processFieldVariableDeclarations(String typeText, List<String> vdList) {
-        for(String vdName : vdList) {
-            String tt = getFullTypeText(typeText, vdName);
-            int type = getTypeId(tt, currentCompleteFileClassName);
-            
-            currentClass.addFieldVariable(type, vdName);
+        if (currentClass != null) {
+            for(String vdName : vdList) {
+                String tt = getFullTypeText(typeText, vdName);
+                int type = getTypeId(tt, currentCompleteFileClassName);
+
+                currentClass.addFieldVariable(type, vdName);
+            }
         }
     }
     

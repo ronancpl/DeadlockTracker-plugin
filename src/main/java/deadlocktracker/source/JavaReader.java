@@ -90,6 +90,7 @@ public class JavaReader extends JavaParserBaseListener {
     private static Map<Integer, String> LinkedDataNames = new HashMap();
     
     private static List<String> currentImportList = new ArrayList<>();
+    private static String absolutePath = null;
     private static String currentPackageName;
     private static String currentCompleteFileClassName;
     private static DeadlockClass currentClass = null;
@@ -112,20 +113,6 @@ public class JavaReader extends JavaParserBaseListener {
         }
         
         currentImportList.add(s);
-    }
-    
-    public void setPackageNameFromFilePath(String fileName) {
-		String str = new String(fileName);
-		
-		int idx = str.lastIndexOf(".");
-		if (idx > -1) {
-			str = str.substring(0, idx + 1);			
-		}
-		
-		str.replace('\\', '.');
-		str.replace('/', '.');
-		
-        currentPackageName = str;
     }
     
     @Override

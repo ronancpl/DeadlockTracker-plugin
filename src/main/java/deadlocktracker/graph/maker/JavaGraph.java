@@ -21,7 +21,6 @@ import deadlocktracker.containers.DeadlockStorage;
 import deadlocktracker.containers.Pair;
 import deadlocktracker.graph.DeadlockAbstractType;
 import deadlocktracker.graph.DeadlockGraphMethod;
-import deadlocktracker.source.JavaReader;
 import language.java.JavaLexer;
 import language.java.JavaParser;
 
@@ -34,8 +33,6 @@ public class JavaGraph extends DeadlockGraphMaker {
 	@Override
 	public void parseSourceFile(String fileName, ParseTreeListener listener) {
         try {
-        	((JavaReader) listener).setPackageNameFromFilePath(fileName);
-        	
             JavaLexer lexer = new JavaLexer(CharStreams.fromFileName(fileName));
             CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
             JavaParser parser = new JavaParser(commonTokenStream);
