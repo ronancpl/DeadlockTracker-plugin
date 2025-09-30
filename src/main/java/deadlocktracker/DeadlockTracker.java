@@ -56,7 +56,23 @@ public class DeadlockTracker extends AbstractMojo {
         }
     }
     
-    private static void listJavaFiles(String directoryName, List<String> files) {
+    private static boolean isSourceFile(String fName) {
+    	List<String> list = DeadlockConfig.getAssociatedFileExtensions();
+    	
+    	if (list.isEmpty()) {
+    	    return true;
+    	}
+    	
+    	for (String ext : list) {
+    	    if (fName.endsWith(ext)) {
+    	        return true;
+            }
+    	}
+    	
+    	return false;
+    }
+    
+    private static void listSourceFiles(String directoryName, List<String> files) {
         File directory = new File(directoryName);
 
         // get all the files from a directory
@@ -64,18 +80,18 @@ public class DeadlockTracker extends AbstractMojo {
         for (File file : fList) {
             if (file.isFile()) {
                 String fName = file.getName();
-                if(fName.endsWith(".java")) {
+                if(isSourceFile(fName)) {
                     files.add(file.getAbsolutePath());
                 }
             } else if (file.isDirectory()) {
-                listJavaFiles(file.getAbsolutePath(), files);
+                listSourceFiles(file.getAbsolutePath(), files);
             }
         }
     }
     
-    private static DeadlockStorage parseJavaProject(String directoryName) {
+    private static DeadlockStorage parseSourceProject(String directoryName) {
         List<String> fileNames = new ArrayList<>();
-        listJavaFiles(directoryName, fileNames);
+        listSourceFiles(directoryName, fileNames);
         
         JavaReader reader = new JavaReader();
         
@@ -116,7 +132,7 @@ public class DeadlockTracker extends AbstractMojo {
         
         DeadlockGraphMaker g = DeadlockConfig.getGraphMakerFromProperty(("language"));
         
-        DeadlockStorage md = parseJavaProject(DeadlockConfig.getProperty("src_folder"));
+        DeadlockStorage md = parseSourceProject(DeadlockConfig.getProperty("src_folder"));
         System.out.println("Project parse complete!\n");
         
         DeadlockGraph mdg = g.generateSourceGraph(md);

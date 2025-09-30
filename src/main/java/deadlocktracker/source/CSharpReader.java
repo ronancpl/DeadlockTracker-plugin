@@ -35,14 +35,12 @@ import deadlocktracker.graph.DeadlockAbstractType;
 import deadlocktracker.strings.IgnoredTypes;
 import deadlocktracker.strings.LinkedTypes;
 import deadlocktracker.strings.ReflectedTypes;
-import edu.emory.mathcs.backport.java.util.Collections;
 import language.csharp.CSharpLexer;
 import language.csharp.CSharpParser;
 import language.csharp.CSharpParserBaseListener;
 
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.ParserRuleContext;
 
 /**
  *

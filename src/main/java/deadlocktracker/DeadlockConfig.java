@@ -11,6 +11,8 @@
 */
 package deadlocktracker;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import deadlocktracker.graph.maker.CSharpGraph;
@@ -58,6 +60,7 @@ public class DeadlockConfig {
 	}
 	
     private static Properties prop;
+    private static List<String> extensions;
         
     public static String getProperty(String key) {
         return prop.getProperty(key);
@@ -65,14 +68,29 @@ public class DeadlockConfig {
     
     public static void loadProperties(Properties properties) {
         prop = properties;
+        loadAssociatedFileExtensions();
+    }
+    
+    public static void loadAssociatedFileExtensions() {
+    	extensions = new ArrayList<>();
+    	for (String sp : getProperty("extensions").split(",")) {
+    		sp = sp.trim();
+    		if (!sp.isEmpty()) {
+    			extensions.add("." + sp);    			
+    		}
+    	}
     }
     
     public static DeadlockGraphMaker getGraphMakerFromProperty(String key) {
     	try {
-    		return Language.getGraphMakerByName(getProperty(key)).newInstance();
+    		return Language.getGraphMakerByName(getProperty(key).trim()).newInstance();
     	} catch (IllegalAccessException | InstantiationException | NullPointerException e) {
     		e.printStackTrace();
     		return null;
     	}
+    }
+    
+    public static List<String> getAssociatedFileExtensions() {
+    	return extensions;
     }
 }
