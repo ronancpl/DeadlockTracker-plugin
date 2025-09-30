@@ -34,7 +34,7 @@ public class CSharpGraph extends DeadlockGraphMaker {
 	@Override
 	public void parseSourceFile(String fileName, ParseTreeListener listener) {
         try {
-        	((CSharpReader) listener).setPackageNameFromFilePath(fileName);
+            ((CSharpReader) listener).setPackageNameFromFilePath(fileName);
         	
             CSharpLexer lexer = new CSharpLexer(CharStreams.fromFileName(fileName));
             CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);

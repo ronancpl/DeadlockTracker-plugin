@@ -17,6 +17,10 @@ import java.util.Properties;
 
 import deadlocktracker.graph.maker.CSharpGraph;
 import deadlocktracker.graph.maker.JavaGraph;
+import deadlocktracker.source.CSharpReader;
+import deadlocktracker.source.JavaReader;
+
+import org.antlr.v4.runtime.tree.ParseTreeListener;
 
 /**
  *
@@ -26,37 +30,53 @@ public class DeadlockConfig {
     
 	private enum Language {
 
-		JAVA("java", JavaGraph.class),
-		CSHARP("c#", CSharpGraph.class),
-		UNSUPPORTED("", null);
+		JAVA("java", JavaGraph.class, new JavaReader()),
+		CSHARP("c#", CSharpGraph.class, new CSharpReader()),
+		UNSUPPORTED("", null, null);
 		
 		private final String name;
-		private final Class<? extends DeadlockGraphMaker> class_;
+		private final Class<? extends DeadlockGraphMaker> graph_class;
+                private final ParseTreeListener parser;
 		
-		private Language(String name, Class<? extends DeadlockGraphMaker> class_) {
+		private Language(String name, Class<? extends DeadlockGraphMaker> graph_class, ParseTreeListener parser) {
 			this.name = name;
-			this.class_ = class_;
+			this.graph_class = graph_class;
+                        this.parser = parser;
 		}
 		
 		private String getName() {
 			return this.name;
 		}
 		
-		private Class<? extends DeadlockGraphMaker> getClass_() {
-			return this.class_;
+		public Class<? extends DeadlockGraphMaker> getGraphClass() {
+			return this.graph_class;
 		}
+                
+                private ParseTreeListener getParser() {
+                        return this.parser;
+                }
 		
 		public static Class<? extends DeadlockGraphMaker> getGraphMakerByName(String name) {
 			name = name.trim().toLowerCase();
 			for (Language l : Language.values()) {
 				if(l.getName().contentEquals(name)) {
-					return l.getClass_();
+					return l.getGraphClass();
 				}
 			}
 			
-			return UNSUPPORTED.getClass_();
+			return UNSUPPORTED.getGraphClass();
 		}
-		
+                
+                public static ParseTreeListener getParserByName(String name) {
+			name = name.trim().toLowerCase();
+			for (Language l : Language.values()) {
+				if(l.getName().contentEquals(name)) {
+					return l.getParser();
+				}
+			}
+			
+			return UNSUPPORTED.getParser();
+		}
 	}
 	
     private static Properties prop;
@@ -83,8 +103,17 @@ public class DeadlockConfig {
     
     public static DeadlockGraphMaker getGraphMakerFromProperty(String key) {
     	try {
-    		return Language.getGraphMakerByName(getProperty(key).trim()).newInstance();
+    		return Language.getGraphMakerByName(getProperty(key)).newInstance();
     	} catch (IllegalAccessException | InstantiationException | NullPointerException e) {
+    		e.printStackTrace();
+    		return null;
+    	}
+    }
+    
+    public static ParseTreeListener getSourceParserFromProperty(String key) {
+        try {
+    		return Language.getParserByName(getProperty(key));
+    	} catch (NullPointerException e) {
     		e.printStackTrace();
     		return null;
     	}

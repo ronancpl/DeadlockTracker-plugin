@@ -15,14 +15,13 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Mojo;
 
-import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.*;
 
 import deadlocktracker.containers.DeadlockEntry;
 import deadlocktracker.containers.DeadlockLock;
 import deadlocktracker.containers.DeadlockStorage;
 import deadlocktracker.source.JavaReader;
-import deadlocktracker.graph.maker.JavaGraph;
+import deadlocktracker.source.CSharpReader;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -32,8 +31,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-
-import language.java.*;
 
 /**
  *
@@ -75,11 +72,9 @@ public class DeadlockTracker extends AbstractMojo {
         }
     }
     
-    private static DeadlockStorage parseSourceProject(String directoryName, DeadlockGraphMaker g) {
+    private static DeadlockStorage parseSourceProject(String directoryName, DeadlockGraphMaker g, ParseTreeListener reader) {
         List<String> fileNames = new ArrayList<>();
         listSourceFiles(directoryName, fileNames);
-        
-        JavaReader reader = new JavaReader();
         
         for(String fName : fileNames) {
             System.out.println("Parsing '" + fName + "'");
@@ -87,7 +82,16 @@ public class DeadlockTracker extends AbstractMojo {
         }
         System.out.println("Project file reading complete!\n");
         
-        return JavaReader.compileProjectData();     // finally, updates the storage table with relevant associations
+        DeadlockStorage ret;
+        if (reader instanceof JavaReader) {
+            ret = ((JavaReader) reader).compileProjectData();
+        } else if (reader instanceof CSharpReader) {
+            ret = ((CSharpReader) reader).compileProjectData();
+        } else {
+            ret = null;
+        }
+        
+        return ret;     // finally, updates the storage table with relevant associations
     }
     
     private static void loadPropertiesFile() {
@@ -117,8 +121,9 @@ public class DeadlockTracker extends AbstractMojo {
         loadPropertiesFile();
         
         DeadlockGraphMaker g = DeadlockConfig.getGraphMakerFromProperty(("language"));
+        ParseTreeListener l = DeadlockConfig.getSourceParserFromProperty(("language"));
         
-        DeadlockStorage md = parseSourceProject(DeadlockConfig.getProperty("src_folder"), g);
+        DeadlockStorage md = parseSourceProject(DeadlockConfig.getProperty("src_folder"), g, l);
         System.out.println("Project parse complete!\n");
         
         DeadlockGraph mdg = g.generateSourceGraph(md);
@@ -140,4 +145,5 @@ public class DeadlockTracker extends AbstractMojo {
     public static void main(String[] args) {
         executeDeadlockTracker();
     }
+    
 }

@@ -1320,7 +1320,7 @@ public class CSharpReader extends CSharpParserBaseListener {
         }
     }
     
-    public static DeadlockStorage compileProjectData(String packageName) {
+    public static DeadlockStorage compileProjectData() {
         //System.out.println(storage);
         
         parseImportClasses();
