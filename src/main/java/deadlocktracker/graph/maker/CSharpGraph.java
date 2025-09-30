@@ -1,5 +1,6 @@
 package deadlocktracker.graph.maker;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -9,6 +10,9 @@ import java.util.Set;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.ParseTreeListener;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import deadlocktracker.DeadlockGraphMaker;
 import deadlocktracker.containers.DeadlockClass;
@@ -17,6 +21,7 @@ import deadlocktracker.containers.DeadlockStorage;
 import deadlocktracker.containers.Pair;
 import deadlocktracker.graph.DeadlockAbstractType;
 import deadlocktracker.graph.DeadlockGraphMethod;
+import deadlocktracker.source.CSharpReader;
 import language.csharp.CSharpLexer;
 import language.csharp.CSharpParser;
 
@@ -25,6 +30,23 @@ import language.csharp.CSharpParser;
  * @author RonanLana
  */
 public class CSharpGraph extends DeadlockGraphMaker {
+	
+	@Override
+	public void parseSourceFile(String fileName, ParseTreeListener listener) {
+        try {
+        	((CSharpReader) listener).setPackageNameFromFilePath(fileName);
+        	
+            CSharpLexer lexer = new CSharpLexer(CharStreams.fromFileName(fileName));
+            CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+            CSharpParser parser = new CSharpParser(commonTokenStream);
+            ParseTree tree = parser.compilation_unit();
+            
+            ParseTreeWalker walker = new ParseTreeWalker();
+            walker.walk(listener, tree);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 	
 	@Override
 	public Integer getLiteralType(ParserRuleContext ctx) {

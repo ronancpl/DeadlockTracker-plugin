@@ -38,6 +38,7 @@ import deadlocktracker.strings.LinkedTypes;
 
 import language.java.JavaParser;
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTreeListener;
 
 /**
  *
@@ -81,6 +82,7 @@ public abstract class DeadlockGraphMaker {
     private Integer runningFid = 0;
     private Integer lockId;
     
+    public abstract void parseSourceFile(String fileName, ParseTreeListener listener);
     public abstract Integer getLiteralType(ParserRuleContext ctx);
     public abstract List<ParserRuleContext> getArgumentList(ParserRuleContext ctx);
     public abstract Set<Integer> getMethodReturnType(DeadlockGraphMethod node, Integer classType, ParserRuleContext methodCall, DeadlockFunction sourceMethod, DeadlockClass sourceClass);

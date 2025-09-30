@@ -114,6 +114,20 @@ public class JavaReader extends JavaParserBaseListener {
         currentImportList.add(s);
     }
     
+    public void setPackageNameFromFilePath(String fileName) {
+		String str = new String(fileName);
+		
+		int idx = str.lastIndexOf(".");
+		if (idx > -1) {
+			str = str.substring(0, idx + 1);			
+		}
+		
+		str.replace('\\', '.');
+		str.replace('/', '.');
+		
+        currentPackageName = str;
+    }
+    
     @Override
     public void enterPackageDeclaration(JavaParser.PackageDeclarationContext ctx) {
         currentPackageName = ctx.qualifiedName().getText() + ".";

@@ -42,20 +42,6 @@ import language.java.*;
 @Mojo(name = "execute")
 public class DeadlockTracker extends AbstractMojo {
 
-    private static void parseJavaFile(String fileName, JavaReader listener) {
-        try {
-            JavaLexer lexer = new JavaLexer(CharStreams.fromFileName(fileName));
-            CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
-            JavaParser parser = new JavaParser(commonTokenStream);
-            ParseTree tree = parser.compilationUnit();
-            
-            ParseTreeWalker walker = new ParseTreeWalker();
-            walker.walk(listener, tree);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-    
     private static boolean isSourceFile(String fName) {
     	List<String> list = DeadlockConfig.getAssociatedFileExtensions();
     	
@@ -89,7 +75,7 @@ public class DeadlockTracker extends AbstractMojo {
         }
     }
     
-    private static DeadlockStorage parseSourceProject(String directoryName) {
+    private static DeadlockStorage parseSourceProject(String directoryName, DeadlockGraphMaker g) {
         List<String> fileNames = new ArrayList<>();
         listSourceFiles(directoryName, fileNames);
         
@@ -97,7 +83,7 @@ public class DeadlockTracker extends AbstractMojo {
         
         for(String fName : fileNames) {
             System.out.println("Parsing '" + fName + "'");
-            parseJavaFile(fName, reader);
+            g.parseSourceFile(fName, reader);
         }
         System.out.println("Project file reading complete!\n");
         
@@ -132,7 +118,7 @@ public class DeadlockTracker extends AbstractMojo {
         
         DeadlockGraphMaker g = DeadlockConfig.getGraphMakerFromProperty(("language"));
         
-        DeadlockStorage md = parseSourceProject(DeadlockConfig.getProperty("src_folder"));
+        DeadlockStorage md = parseSourceProject(DeadlockConfig.getProperty("src_folder"), g);
         System.out.println("Project parse complete!\n");
         
         DeadlockGraph mdg = g.generateSourceGraph(md);

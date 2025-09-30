@@ -102,6 +102,20 @@ public class CSharpReader extends CSharpParserBaseListener {
     private static Map<Integer, Pair<DeadlockClass, Integer>> volatileMaskedTypes = new HashMap<>();
     private static Map<Integer, Pair<String, String>> volatileDataTypes = new HashMap<>();  // cannot recover the import classes at the first parsing, so the type definition comes at the second rundown
     
+    public void setPackageNameFromFilePath(String fileName) {
+    	String str = new String(fileName);
+    	str.replace('\\', '/');
+    	
+		int idx = str.lastIndexOf("/");
+		if (idx > -1) {
+			str = str.substring(0, idx + 1);			
+		}
+		
+		str.replace('/', '.');
+		
+        currentPackageName = str;
+    }
+    
     @Override
     public void enterCompilation_unit(CSharpParser.Compilation_unitContext ctx) {
         currentImportList.clear();
