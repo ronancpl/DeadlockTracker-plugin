@@ -4,7 +4,7 @@
 
 ## About
 
-It's a developer tool designed to pick and line potential deadlock issues throughout a Java project.
+It's a developer tool designed to pick and line potential deadlock issues throughout a Java or C# project.
 
 ## How to use
 

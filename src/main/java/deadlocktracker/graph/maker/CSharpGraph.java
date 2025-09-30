@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import deadlocktracker.DeadlockGraphMaker;
@@ -15,6 +17,7 @@ import deadlocktracker.containers.DeadlockStorage;
 import deadlocktracker.containers.Pair;
 import deadlocktracker.graph.DeadlockAbstractType;
 import deadlocktracker.graph.DeadlockGraphMethod;
+import language.csharp.CSharpLexer;
 import language.csharp.CSharpParser;
 
 /**
@@ -123,9 +126,16 @@ public class CSharpGraph extends DeadlockGraphMaker {
             }
         }
         
-        
-        
         return retTypes;
+    }
+	
+	private static CSharpParser.Unary_expressionContext generateDereferencedContext(String typeName) {
+        String str = typeName;
+        CSharpLexer lexer = new CSharpLexer(CharStreams.fromString(str));
+        CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+        CSharpParser parser = new CSharpParser(commonTokenStream);
+        
+        return parser.unary_expression();
     }
 	
 	@Override
@@ -150,6 +160,36 @@ public class CSharpGraph extends DeadlockGraphMaker {
 	                
 	                CSharpParser.Type_Context nameCtx = cresCtx.type_();
 	                String idName = nameCtx.base_type().getText();
+	                
+	                if(curCtx.getChild(curCtx.getChildCount() - 1).getText().contentEquals("*")) {
+	                	String outerName = nameCtx.getText();
+	                	if (outerName.endsWith("*")) outerName = outerName.substring(0, outerName.lastIndexOf("*"));
+	                	
+	                	for (Integer typeId : parseMethodCalls(node, generateDereferencedContext(outerName), sourceMethod, sourceClass)) {
+	                		if (typeId > -1) {
+	                			DeadlockClass outerClass = ClassDataTypes.get(typeId);
+			                	
+		                        Integer derType;
+		                        if (outerName.endsWith("*")) {
+		                            derType = getDereferencedType(outerName, outerClass);
+		                        } else {
+		                            DeadlockClass mdc = DeadlockStorage.locateClass(outerName, sourceClass);
+		                            if (mdc != null) {
+		                                derType = ClassDataTypeIds.get(mdc);
+		                            } else if (BasicDataTypeIds.containsKey(outerName)) {
+		                                derType = BasicDataTypeIds.get(outerName);
+		                            } else {
+		                                derType = -2;
+		                            }
+		                        }
+		                        
+		                        ret.add(derType);
+			                    
+			                    return ret;
+	                		}
+	                	}
+	                }
+	                
                     DeadlockClass c = DeadlockStorage.locateClass(idName, sourceClass);
                     
                     if(c != null && c.getMaskedTypeSet() == null) {     // if the creator is instancing a compound data type, let it throw a -2
@@ -166,100 +206,104 @@ public class CSharpGraph extends DeadlockGraphMaker {
 	                    if (maeCtx.qualified_alias_member() != null) {
 	                    	expCtx = maeCtx.qualified_alias_member().identifier(0);
 	                    	
-	                    	Set<Integer> metRetTypes = parseMethodCalls(node, expCtx, sourceMethod, sourceClass);
-	                        if (metRetTypes.size() > 0) {
-	                            for (Integer expType : metRetTypes) {
-	                                if(expType == null) System.out.println("null on " + expCtx.getText() + " src is " + DeadlockStorage.getCanonClassName(sourceClass));
-	                                if (!curCtx.primary_expression_start().getText().contentEquals("this")) {
-	                                    if(expType != -1) {
-	                                        if(expType != -2) {     // expType -2 means the former expression type has been excluded from the search
-	                                            if(curCtx.method_invocation().size() > 0) {
-	                                                Set<Integer> r = getMethodReturnType(node, expType, curCtx, sourceMethod, sourceClass);
-	                                                ret.addAll(r);
-
-	                                                if(ret.contains(-1)) {
-	                                                    DeadlockClass c = getClassFromType(expType);
-	                                                    if(c != null && c.isInterface()) {  // it's an interface, there's no method implementation to be found there
-	                                                        ret.remove(-1);
-	                                                        ret.add(-2);
-	                                                    }
-	                                                }
-
-	                                                continue;
-	                                            } else if(curCtx.identifier().get(0) != null) {
-	                                                if(isIgnoredType(expType)) {
-	                                                    ret.add(-2);
-	                                                    continue;
-	                                                }
-	                                                
-	                                                CSharpParser.IdentifierContext idCtx = curCtx.identifier().get(0);
-
-	                                                DeadlockClass c = getClassFromType(expType);
-	                                                Set<Integer> templateTypes = null;
-
-	                                                if(c == null) {
-	                                                    List<Integer> cTypes = CompoundDataTypes.get(expType);
-	                                                    if(cTypes != null) {
-	                                                        c = getClassFromType(cTypes.get(cTypes.size() - 1));
-
-	                                                        if(c == null) {
-	                                                            //System.out.println("Compound FAILED @ " + cTypes.get(cTypes.size() - 1));
-	                                                        } else {
-	                                                            templateTypes = c.getMaskedTypeSet();
-	                                                        }
-	                                                    }
-
-	                                                    if(c == null) {
-	                                                        String typeName = BasicDataTypes.get(expType);
-
-	                                                        //System.out.println("FAILED @ " + expType);
-	                                                        System.out.println("[Warning] No datatype found for " + idCtx + " on expression " + curCtx.getText() + " srcclass " + DeadlockStorage.getCanonClassName(sourceClass) + " detected exptype " + expType);
-	                                                        ret.add(-2);
-	                                                        continue;
-	                                                    }
-	                                                } else {
-	                                                    if(c.isEnum()) {    // it's an identifier defining an specific item from an enum, return self-type
-	                                                        if(idCtx.getText().contentEquals("length")) {
-	                                                            ret.add(ElementalTypes[0]);
-	                                                            continue;
-	                                                        }
-
-	                                                        ret.add(expType);
-	                                                        continue;
-	                                                    }
-
-	                                                    templateTypes = c.getMaskedTypeSet();
-	                                                }
-	                                                
-	                                                String element = idCtx.getText();
-	                                                
-	                                                Integer type = getPrimaryTypeOnFieldVars(element, c);
-	                                                if(type == null) {
-	                                                    DeadlockClass mdc = DeadlockStorage.locateInternalClass(element, c);  // element could be a private class reference
-	                                                    if(mdc != null) {
-	                                                        ret.add(ClassDataTypeIds.get(mdc));
-	                                                        continue;
-	                                                    }
-
-	                                                    //System.out.println("SOMETHING OUT OF CALL FOR FIELD " + curCtx.IDENTIFIER().getText() + " ON " + DeadlockStorage.getCanonClassName(c));
-	                                                    ret.add(-1);
-	                                                    continue;
-	                                                }
-
-	                                                ret.add(getRelevantType(type, templateTypes, c, expType));
-	                                                continue;
-	                                            }
-	                                        } else {
-	                                            ret.add(-2);
-	                                            continue;
-	                                        }
-	                                    }
-	                                } else {
-	                                    ret.add(expType);
-	                                    continue;
-	                                }
-	                            }
-	                            
+	                    	if (!curCtx.primary_expression_start().getText().contentEquals("this")) {
+                    			for (int i = 0; i < curCtx.getChildCount(); i++) {
+                    				ParserRuleContext chCtx = (ParserRuleContext) curCtx.getChild(i);
+                    		
+			                    	Set<Integer> metRetTypes = parseMethodCalls(node, chCtx, sourceMethod, sourceClass);
+			                        if (metRetTypes.size() > 0) {
+			                            for (Integer expType : metRetTypes) {
+			                                if(expType == null) System.out.println("null on " + expCtx.getText() + " src is " + DeadlockStorage.getCanonClassName(sourceClass));
+		                                	if(expType != -1) {
+		                                        if(expType != -2) {     // expType -2 means the former expression type has been excluded from the search
+		                                            if(chCtx instanceof CSharpParser.Method_invocationContext) {
+		                                                Set<Integer> r = getMethodReturnType(node, expType, curCtx, sourceMethod, sourceClass);
+		                                                ret.addAll(r);
+		                                                
+		                                                if(ret.contains(-1)) {
+		                                                    DeadlockClass c = getClassFromType(expType);
+		                                                    if(c != null && c.isInterface()) {  // it's an interface, there's no method implementation to be found there
+		                                                        ret.remove(-1);
+		                                                        ret.add(-2);
+		                                                    }
+		                                                }
+	
+		                                                continue;
+		                                            } else if(chCtx instanceof CSharpParser.IdentifierContext) {
+		                                                if(isIgnoredType(expType)) {
+		                                                    ret.add(-2);
+		                                                    continue;
+		                                                }
+		                                                
+		                                                CSharpParser.IdentifierContext idCtx = (CSharpParser.IdentifierContext) chCtx;
+	
+		                                                DeadlockClass c = getClassFromType(expType);
+		                                                Set<Integer> templateTypes = null;
+	
+		                                                if(c == null) {
+		                                                    List<Integer> cTypes = CompoundDataTypes.get(expType);
+		                                                    if(cTypes != null) {
+		                                                        c = getClassFromType(cTypes.get(cTypes.size() - 1));
+	
+		                                                        if(c == null) {
+		                                                            //System.out.println("Compound FAILED @ " + cTypes.get(cTypes.size() - 1));
+		                                                        } else {
+		                                                            templateTypes = c.getMaskedTypeSet();
+		                                                        }
+		                                                    }
+	
+		                                                    if(c == null) {
+		                                                        //String typeName = BasicDataTypes.get(expType);
+	
+		                                                        //System.out.println("FAILED @ " + expType);
+		                                                        System.out.println("[Warning] No datatype found for " + idCtx + " on expression " + curCtx.getText() + " srcclass " + DeadlockStorage.getCanonClassName(sourceClass) + " detected exptype " + expType);
+		                                                        ret.add(-2);
+		                                                        continue;
+		                                                    }
+		                                                } else {
+		                                                    if(c.isEnum()) {    // it's an identifier defining an specific item from an enum, return self-type
+		                                                        if(idCtx.getText().contentEquals("length")) {
+		                                                            ret.add(ElementalTypes[0]);
+		                                                            continue;
+		                                                        }
+	
+		                                                        ret.add(expType);
+		                                                        continue;
+		                                                    }
+	
+		                                                    templateTypes = c.getMaskedTypeSet();
+		                                                }
+		                                                
+		                                                String element = idCtx.getText();
+		                                                
+		                                                Integer type = getPrimaryTypeOnFieldVars(element, c);
+		                                                if(type == null) {
+		                                                    DeadlockClass mdc = DeadlockStorage.locateInternalClass(element, c);  // element could be a private class reference
+		                                                    if(mdc != null) {
+		                                                        ret.add(ClassDataTypeIds.get(mdc));
+		                                                        continue;
+		                                                    }
+	
+		                                                    //System.out.println("SOMETHING OUT OF CALL FOR FIELD " + curCtx.IDENTIFIER().getText() + " ON " + DeadlockStorage.getCanonClassName(c));
+		                                                    ret.add(-1);
+		                                                    continue;
+		                                                }
+	
+		                                                ret.add(getRelevantType(type, templateTypes, c, expType));
+		                                                continue;
+		                                            }
+		                                        } else {
+		                                            ret.add(-2);
+		                                            continue;
+		                                        }
+		                                    } else {
+			                                    ret.add(expType);
+			                                    continue;
+			                                }
+		                                }
+		                            }
+                				}
+		                            
 	                            return ret;
 	                        }
 	                    }
@@ -294,9 +338,9 @@ public class CSharpGraph extends DeadlockGraphMaker {
 		
 		String methodName = "";
         if (!call.method_invocation().isEmpty()) {
-            methodName = call.identifier().get(0).getText();
+            methodName = ((CSharpParser.SimpleNameExpressionContext) call.primary_expression_start()).getText();
         } else if (!call.member_access().isEmpty()) {
-        	methodName = call.identifier().get(0).getText() + "." + call.member_access().get(0).getText();
+        	methodName = ((CSharpParser.SimpleNameExpressionContext) call.primary_expression_start()).getText() + "." + call.member_access().get(0).getText();
         }
         
         return methodName;

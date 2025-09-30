@@ -13,12 +13,50 @@ package deadlocktracker;
 
 import java.util.Properties;
 
+import deadlocktracker.graph.maker.CSharpGraph;
+import deadlocktracker.graph.maker.JavaGraph;
+
 /**
  *
  * @author RonanLana
  */
 public class DeadlockConfig {
     
+	private enum Language {
+
+		JAVA("java", JavaGraph.class),
+		CSHARP("c#", CSharpGraph.class),
+		UNSUPPORTED("", null);
+		
+		private final String name;
+		private final Class<? extends DeadlockGraphMaker> class_;
+		
+		private Language(String name, Class<? extends DeadlockGraphMaker> class_) {
+			this.name = name;
+			this.class_ = class_;
+		}
+		
+		private String getName() {
+			return this.name;
+		}
+		
+		private Class<? extends DeadlockGraphMaker> getClass_() {
+			return this.class_;
+		}
+		
+		public static Class<? extends DeadlockGraphMaker> getGraphMakerByName(String name) {
+			name = name.trim().toLowerCase();
+			for (Language l : Language.values()) {
+				if(l.getName().contentEquals(name)) {
+					return l.getClass_();
+				}
+			}
+			
+			return UNSUPPORTED.getClass_();
+		}
+		
+	}
+	
     private static Properties prop;
         
     public static String getProperty(String key) {
@@ -29,4 +67,12 @@ public class DeadlockConfig {
         prop = properties;
     }
     
+    public static DeadlockGraphMaker getGraphMakerFromProperty(String key) {
+    	try {
+    		return Language.getGraphMakerByName(getProperty(key)).newInstance();
+    	} catch (IllegalAccessException | InstantiationException | NullPointerException e) {
+    		e.printStackTrace();
+    		return null;
+    	}
+    }
 }

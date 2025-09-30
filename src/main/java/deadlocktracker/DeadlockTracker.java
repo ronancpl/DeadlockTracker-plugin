@@ -114,7 +114,7 @@ public class DeadlockTracker extends AbstractMojo {
     private static void executeDeadlockTracker() {
         loadPropertiesFile();
         
-        JavaGraph g = new JavaGraph();
+        DeadlockGraphMaker g = DeadlockConfig.getGraphMakerFromProperty(("language"));
         
         DeadlockStorage md = parseJavaProject(DeadlockConfig.getProperty("src_folder"));
         System.out.println("Project parse complete!\n");
