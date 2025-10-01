@@ -94,7 +94,7 @@ public class CSharpReader extends CSharpParserBaseListener {
     
     private static List<String> currentImportList = new ArrayList<>();
     private static String sourceDirPrefixPath;
-    private static String currentPackageName;
+    private static Stack<String> currentPackageName = new Stack<>();
     private static String currentCompleteFileClassName;
     private static DeadlockClass currentClass = null;
     private static List<DeadlockClass> customClasses = new LinkedList<>();
@@ -137,7 +137,7 @@ public class CSharpReader extends CSharpParserBaseListener {
         str = str.substring(idx + sourceDirPrefixPath.length());
         str = str.replace('/', '.');
         
-        currentPackageName = str;
+        currentPackageName.push(str);
     }
     
     @Override
@@ -146,6 +146,16 @@ public class CSharpReader extends CSharpParserBaseListener {
         methodStack.add(method);
         
         currentImportList.clear();
+    }
+    
+    @Override
+    public void enterNamespace_declaration(CSharpParser.Namespace_declarationContext ctx) {
+        currentPackageName.push(ctx.qualified_identifier().getText() + ".");
+    }
+    
+    @Override
+    public void exitNamespace_declaration(CSharpParser.Namespace_declarationContext ctx) {
+        currentPackageName.pop();
     }
     
     @Override
@@ -249,14 +259,14 @@ public class CSharpReader extends CSharpParserBaseListener {
         
         if(currentClass != null) {
             classStack.add(currentClass);
-            currentClass = new DeadlockClass(DeadlockClassType.CLASS, className, currentPackageName, getPathName(className), superNames, isAbstract, currentClass);
+            currentClass = new DeadlockClass(DeadlockClassType.CLASS, className, currentPackageName.peek(), getPathName(className), superNames, isAbstract, currentClass);
         } else {
-            currentCompleteFileClassName = className;
+            currentCompleteFileClassName = currentPackageName.peek() + className;
             
             int idx = className.indexOf(".");
             if (idx > -1) className = className.substring(idx + 1);
             
-            currentClass = new DeadlockClass(DeadlockClassType.CLASS, className, currentPackageName, getPathName(className), superNames, isAbstract, null);
+            currentClass = new DeadlockClass(DeadlockClassType.CLASS, className, currentPackageName.peek(), getPathName(className), superNames, isAbstract, null);
         }
         
         InheritanceTree.put(currentClass, new LinkedList<>());
@@ -269,10 +279,10 @@ public class CSharpReader extends CSharpParserBaseListener {
                 currentClass.addImport(s);
             }
             
-            if(PublicClasses.containsKey(currentPackageName)) {
-                PublicClasses.get(currentPackageName).put(currentClass.getPathName(), currentClass);
+            if(PublicClasses.containsKey(currentPackageName.peek())) {
+                PublicClasses.get(currentPackageName.peek()).put(currentClass.getPathName(), currentClass);
             } else {
-                PublicClasses.put(currentPackageName, newPackageClass(currentClass.getPathName(), currentClass));
+                PublicClasses.put(currentPackageName.peek(), newPackageClass(currentClass.getPathName(), currentClass));
             }
             
             currentClass = null;
@@ -299,14 +309,14 @@ public class CSharpReader extends CSharpParserBaseListener {
         
         if(currentClass != null) {
             classStack.add(currentClass);
-            currentClass = new DeadlockEnum(className, currentPackageName, getPathName(className), superNames, currentClass);
+            currentClass = new DeadlockEnum(className, currentPackageName.peek(), getPathName(className), superNames, currentClass);
         } else {
-            currentCompleteFileClassName = className;
+            currentCompleteFileClassName = currentPackageName.peek() + className;
             
             int idx = className.indexOf(".");
             if (idx > -1) className = className.substring(idx + 1);
             
-            currentClass = new DeadlockEnum(className, currentPackageName, getPathName(className), superNames, null);
+            currentClass = new DeadlockEnum(className, currentPackageName.peek(), getPathName(className), superNames, null);
         }
         
         InheritanceTree.put(currentClass, new LinkedList<>());
@@ -319,10 +329,10 @@ public class CSharpReader extends CSharpParserBaseListener {
                 currentClass.addImport(s);
             }
             
-            if(PublicClasses.containsKey(currentPackageName)) {
-                PublicClasses.get(currentPackageName).put(currentClass.getPathName(), currentClass);
+            if(PublicClasses.containsKey(currentPackageName.peek())) {
+                PublicClasses.get(currentPackageName.peek()).put(currentClass.getPathName(), currentClass);
             } else {
-                PublicClasses.put(currentPackageName, newPackageClass(currentClass.getPathName(), currentClass));
+                PublicClasses.put(currentPackageName.peek(), newPackageClass(currentClass.getPathName(), currentClass));
             }
             
             currentClass = null;
@@ -349,10 +359,10 @@ public class CSharpReader extends CSharpParserBaseListener {
         
         if(currentClass != null) {
             classStack.add(currentClass);
-            currentClass = new DeadlockClass(DeadlockClassType.INTERFACE, className, currentPackageName, getPathName(className), superNames, true, currentClass);
+            currentClass = new DeadlockClass(DeadlockClassType.INTERFACE, className, currentPackageName.peek(), getPathName(className), superNames, true, currentClass);
         } else {
-            currentCompleteFileClassName = currentPackageName + className;
-            currentClass = new DeadlockClass(DeadlockClassType.INTERFACE, className, currentPackageName, getPathName(className), superNames, true, null);
+            currentCompleteFileClassName = currentPackageName.peek() + className;
+            currentClass = new DeadlockClass(DeadlockClassType.INTERFACE, className, currentPackageName.peek(), getPathName(className), superNames, true, null);
         }
         
         InheritanceTree.put(currentClass, new LinkedList<>());
@@ -365,10 +375,10 @@ public class CSharpReader extends CSharpParserBaseListener {
                 currentClass.addImport(s);
             }
             
-            if(PublicClasses.containsKey(currentPackageName)) {
-                PublicClasses.get(currentPackageName).put(currentClass.getPathName(), currentClass);
+            if(PublicClasses.containsKey(currentPackageName.peek())) {
+                PublicClasses.get(currentPackageName.peek()).put(currentClass.getPathName(), currentClass);
             } else {
-                PublicClasses.put(currentPackageName, newPackageClass(currentClass.getPathName(), currentClass));
+                PublicClasses.put(currentPackageName.peek(), newPackageClass(currentClass.getPathName(), currentClass));
             }
             
             currentClass = null;
@@ -554,7 +564,7 @@ public class CSharpReader extends CSharpParserBaseListener {
     }
     
     private void enterElementValuePair(String elementName, String value) {
-        String lockName = currentPackageName + (currentClass != null ? currentClass.getPathName() + ".": "") + elementName;
+        String lockName = currentPackageName.peek() + (currentClass != null ? currentClass.getPathName() + ".": "") + elementName;
                 
         if(!readLockWaitingSet.isEmpty() || !writeLockWaitingSet.isEmpty()) {
             if(readLockWaitingSet.contains(lockName)) {
@@ -989,7 +999,7 @@ public class CSharpReader extends CSharpParserBaseListener {
     private static List<String> getWrappedTypes(String type) {
         List<String> ret = new LinkedList<>();
         
-        int st = type.indexOf('<') + 1, en = 0;
+        int st = Math.min(type.indexOf('('), type.indexOf('<')) + 1, en = 0;
         int c = 1;
         for(int i = st; i < type.length(); i++) {
             char ch = type.charAt(i);
@@ -999,9 +1009,9 @@ public class CSharpReader extends CSharpParserBaseListener {
                     ret.add(parseWrappedType(type.substring(st, i)));
                     st = i + 1;
                 }
-            } else if(ch == '<') {
+            } else if(ch == '(' || ch == '<') {
                 c++;
-            } else if(ch == '>') {
+            } else if(ch == ')' || ch == '<') {
                 c--;
                 en = i;
             }
@@ -1044,7 +1054,7 @@ public class CSharpReader extends CSharpParserBaseListener {
             t = type;
         }
         
-        int en = type.indexOf('<');
+        int en = type.indexOf('(');
         if(en != -1) t = type.substring(0, en);
         
         if (IgnoredTypes.isDataTypeIgnored(t)) {
@@ -1356,7 +1366,7 @@ public class CSharpReader extends CSharpParserBaseListener {
     }
     
     public static DeadlockStorage compileProjectData() {
-        //System.out.println(storage);
+        System.out.println(storage);
         
         parseImportClasses();
         

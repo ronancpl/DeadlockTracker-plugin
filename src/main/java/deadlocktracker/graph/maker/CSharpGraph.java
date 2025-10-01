@@ -359,11 +359,13 @@ public class CSharpGraph extends DeadlockGraphMaker {
 		CSharpParser.Primary_expressionContext call = (CSharpParser.Primary_expressionContext) callCtx;
 		
 		String methodName = "";
-        if (!call.method_invocation().isEmpty()) {
-            methodName = ((CSharpParser.SimpleNameExpressionContext) call.primary_expression_start()).getText();
-        } else if (!call.member_access().isEmpty()) {
-        	methodName = ((CSharpParser.SimpleNameExpressionContext) call.primary_expression_start()).getText() + "." + call.member_access().get(0).getText();
-        }
+                if (call.primary_expression_start() instanceof CSharpParser.SimpleNameExpressionContext) {
+                    if (call.method_invocation() != null) {
+                        methodName = ((CSharpParser.SimpleNameExpressionContext) call.primary_expression_start()).getText();
+                    } else if (call.member_access() != null) {
+                            methodName = ((CSharpParser.SimpleNameExpressionContext) call.primary_expression_start()).getText() + "." + call.member_access().get(0).getText();
+                    }
+                }
         
         return methodName;
 	}
