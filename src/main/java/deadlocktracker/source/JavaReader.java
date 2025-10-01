@@ -1432,7 +1432,7 @@ public class JavaReader extends JavaParserBaseListener {
     }
     
     public static DeadlockStorage compileProjectData() {
-        System.out.println(storage);
+        //System.out.println(storage);
         
         parseImportClasses();
         

@@ -457,7 +457,7 @@ public class DeadlockStorage {
     public String toString() {
         String s = "";
         
-        //s += dumpCachedPackages() + "\n" + dumpCachedImports();
+        s += dumpCachedPackages() + "\n" + dumpCachedImports();
                 
         s += "--------\n LOCKS:\n";
         for(Map.Entry<String, DeadlockLock> l : Locks.entrySet()) {

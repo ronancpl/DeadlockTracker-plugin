@@ -76,7 +76,6 @@ public class CSharpReader extends CSharpParserBaseListener {
     private static AtomicInteger runningId = new AtomicInteger(1);
     private static AtomicInteger runningSyncLockId = new AtomicInteger(0);
     private static AtomicInteger runningTypeId = new AtomicInteger(1);  // volatile id 0 reserved for sync locks
-    private static Stack<Boolean> runningMethodCall = new Stack();
     private static AtomicInteger runningMethodCallCount = new AtomicInteger(0);
     
     private static Stack<Integer> methodCallCountStack = new Stack();
@@ -437,7 +436,12 @@ public class CSharpReader extends CSharpParserBaseListener {
     	String className = list.get(0);
     	String methodName = list.get(1);
     	
-    	DeadlockClass mdc = DeadlockStorage.locateClass(className, currentClass);
+    	DeadlockClass mdc;
+        if (!className.isEmpty()) {
+            mdc = DeadlockStorage.locateClass(className, currentClass);
+        } else {
+            mdc = currentClass;
+        }
         
         DeadlockFunction method = new DeadlockFunction(methodName, mdc, methodStack.isEmpty() ? null : methodStack.peek(), currentAbstract);
         Pair<Integer, Pair<List<Integer>, Map<Long, Integer>>> retParamTypes = getMethodMetadata(ctx, method);
@@ -617,33 +621,28 @@ public class CSharpReader extends CSharpParserBaseListener {
         return parser.expression();
     }
     
-    private static void addMethodFromExpression(CSharpParser.Primary_expressionContext ctx) {
+    private static void addMethodFromExpression(CSharpParser.Unary_expressionContext ctx) {
         DeadlockFunction mdf = methodStack.peek();
         
-        if(!ctx.method_invocation().isEmpty() || !ctx.member_access().isEmpty()) {
+        if(!ctx.primary_expression().method_invocation().isEmpty() || !ctx.primary_expression().member_access().isEmpty()) {
             mdf.addMethodCall(ctx);
         }
     }
     
     @Override
-    public void enterPrimary_expression(CSharpParser.Primary_expressionContext ctx) {
-    	if (ctx.method_invocation().size() > 0) {
-    		runningMethodCall.push(true);
-    		runningMethodCallCount.incrementAndGet();
-    	} else {
-    		runningMethodCall.push(false);
-    	}
+    public void enterUnary_expression(CSharpParser.Unary_expressionContext ctx) {
+    	runningMethodCallCount.incrementAndGet();
     }
     
     @Override
-    public void exitPrimary_expression(CSharpParser.Primary_expressionContext ctx) {
-        if (runningMethodCall.pop()) {
-        	int count = runningMethodCallCount.decrementAndGet();
-            
-            if(count == 0 && !methodStack.isEmpty()) {
-            	addMethodFromExpression(ctx);
-            }
+    public void exitUnary_expression(CSharpParser.Unary_expressionContext ctx) {
+        
+            int count = runningMethodCallCount.decrementAndGet();
+
+        if(count == 0 && !methodStack.isEmpty() && ctx.primary_expression() != null && ctx.primary_expression().method_invocation().size() > 0) {
+            addMethodFromExpression(ctx);
         }
+        
     }
     
     // lambda methods
@@ -1366,7 +1365,7 @@ public class CSharpReader extends CSharpParserBaseListener {
     }
     
     public static DeadlockStorage compileProjectData() {
-        System.out.println(storage);
+        //System.out.println(storage);
         
         parseImportClasses();
         
@@ -1390,8 +1389,14 @@ public class CSharpReader extends CSharpParserBaseListener {
             System.out.println(v.getKey() + " : " + v.getValue());
         }
         
-        for(Map<String, DeadlockClass> m : PublicClasses.values()) {
-            for(DeadlockClass mdc : m.values()) {
+        for(Map<String, DeadlockClass> o : PublicClasses.values()) {
+            for(DeadlockClass mdc : o.values()) {
+                System.out.println(mdc);
+            }
+        }
+        
+        for(Map<String, DeadlockClass> o : PrivateClasses.values()) {
+            for(DeadlockClass mdc : o.values()) {
                 System.out.println(mdc);
             }
         }
