@@ -54,17 +54,30 @@ public class CSharpGraph extends DeadlockGraphMaker {
 
 	@Override
 	public Integer getLiteralType(ParserRuleContext ctx) {
-		CSharpParser.LiteralContext elemCtx = (CSharpParser.LiteralContext) ctx;
+		CSharpParser.LiteralContext elemCtx = ((CSharpParser.LiteralExpressionContext) ctx).literal();
 
 		if(elemCtx.INTEGER_LITERAL() != null || elemCtx.HEX_INTEGER_LITERAL() != null) return ElementalTypes[0];
 		if(elemCtx.REAL_LITERAL() != null) return ElementalTypes[1];
 		if(elemCtx.CHARACTER_LITERAL() != null) return ElementalTypes[2];
-		//if(elemCtx.STRING() != null) return ElementalTypes[3];
-		if(elemCtx.BIN_INTEGER_LITERAL() != null) return ElementalTypes[4];
+		if(elemCtx.string_literal() != null) return ElementalTypes[3];
+		if(elemCtx.BIN_INTEGER_LITERAL() != null || elemCtx.boolean_literal() != null) return ElementalTypes[4];
 		if(elemCtx.NULL_() != null) return ElementalTypes[7];
 
 		return -1;
 	}
+        
+        private void fetchUnaryExpressionsFromContext(ParserRuleContext ctx, List<ParserRuleContext> list) {
+                if (ctx instanceof CSharpParser.Unary_expressionContext) {
+                        list.add(ctx);
+                } else {
+                        for (int i = 0; i < ctx.getChildCount(); i++) {
+                                if (ctx.getChild(i) instanceof ParserRuleContext) {
+                                        ParserRuleContext child = (ParserRuleContext) ctx.getChild(i);
+                                        fetchUnaryExpressionsFromContext(child, list);
+                                }
+                        }
+                }
+        }
 
 	@Override
 	public List<ParserRuleContext> getArgumentList(ParserRuleContext ctx) {
@@ -73,7 +86,7 @@ public class CSharpGraph extends DeadlockGraphMaker {
 		List<ParserRuleContext> ret = new LinkedList<>();
 		if(expList != null) {
 			for(CSharpParser.ArgumentContext exp : expList.argument()) {
-				ret.add(exp.expression());
+				fetchUnaryExpressionsFromContext(exp.expression(), ret);
 			}
 		}
 
@@ -107,8 +120,8 @@ public class CSharpGraph extends DeadlockGraphMaker {
 		if (expCtx != null) {
 			CSharpParser.Method_invocationContext exp = (CSharpParser.Method_invocationContext) expCtx;
 			String methodName = this.methodName;
-
-			//System.out.println("CALL METHODRETURNTYPE for " + classType + " methodcall " + methodName + " with " + exp.getText());
+                        
+                        //System.out.println("CALL METHODRETURNTYPE for " + classType + " methodcall " + methodName + " with " + exp.getText());
 			List<Integer> argTypes = getArgumentTypes(node, exp.argument_list(), sourceMethod, sourceClass);
 
 			if(!ReflectedClasses.containsKey(classType)) {
@@ -191,12 +204,12 @@ public class CSharpGraph extends DeadlockGraphMaker {
 		Integer i = BasicDataTypeIds.get(typeText);
 		return ((i != null) ? i : -2);
 	}
-
+        
 	@Override
 	public Set<Integer> parseMethodCalls(DeadlockGraphMethod node, ParserRuleContext exprCtx, DeadlockFunction sourceMethod, DeadlockClass sourceClass, boolean filter) {
 		Set<Integer> ret = new HashSet<>();
-
-		if (exprCtx instanceof CSharpParser.Unary_expressionContext) {
+                
+                if (exprCtx instanceof CSharpParser.Unary_expressionContext) {
 			CSharpParser.Unary_expressionContext expr = (CSharpParser.Unary_expressionContext) exprCtx;
 			CSharpParser.Primary_expressionContext curCtx = expr.primary_expression();
 
@@ -205,90 +218,45 @@ public class CSharpGraph extends DeadlockGraphMaker {
 				ret.add(getCastType(node, castCtx, sourceMethod, sourceClass));
 				return ret;
 			} else {
-
 				if (curCtx != null) {
-					CSharpParser.Primary_expression_startContext priCtx = curCtx.primary_expression_start();
+                                        this.expType.push(ClassDataTypeIds.get(sourceClass));
+                                        int c = 0;
+                                        for (int i = 0; i < curCtx.getChildCount(); i++) {
+                                                ParserRuleContext chCtx = (ParserRuleContext) curCtx.getChild(i);
+                                                if (chCtx.getText().contains("true")) {
+                                                    int j = 0;
+                                                }
 
-					if(priCtx instanceof CSharpParser.SimpleNameExpressionContext) {
-						methodName = priCtx.getText();
-						ret.add(getNameType(priCtx.getText(), sourceClass));
-					} else if( priCtx instanceof CSharpParser.MemberAccessExpressionContext) {
-						CSharpParser.MemberAccessExpressionContext maeCtx = ((CSharpParser.MemberAccessExpressionContext) curCtx.primary_expression_start());
-						ret.add(getNameType(maeCtx.getText(), sourceClass));
-					} else if(priCtx instanceof CSharpParser.LiteralExpressionContext) {
-						ret.add(getLiteralType(priCtx));
-					} else if(priCtx instanceof CSharpParser.ThisReferenceExpressionContext) {
-						ret.add(getThisType(sourceClass));
-					} else if(priCtx instanceof CSharpParser.ObjectCreationExpressionContext) {
-						CSharpParser.ObjectCreationExpressionContext cresCtx = (CSharpParser.ObjectCreationExpressionContext) priCtx;
+                                                Set<Integer> metRetTypes = parseMethodCalls(node, chCtx, sourceMethod, sourceClass);
+                                                if (metRetTypes.size() > 0) {
+                                                        for (Integer expType : metRetTypes) {
+                                                                if(expType == null) System.out.println("null on " + expr.getText() + " src is " + DeadlockStorage.getCanonClassName(sourceClass));
+                                                                if(expType != -1) {
+                                                                        if(expType != -2) {     // expType -2 means the former expression type has been excluded from the search
+                                                                                this.expType.push(expType);
+                                                                                c++;
+                                                                        } else {
+                                                                                ret.add(-2);
+                                                                                continue;
+                                                                        }
+                                                                } else {
+                                                                        ret.add(expType);
+                                                                        continue;
+                                                                }
+                                                        }
+                                                }
+                                        }
 
-						CSharpParser.Type_Context nameCtx = cresCtx.type_();
-						String idName = nameCtx.base_type().getText();
-
-						if(curCtx.getChild(curCtx.getChildCount() - 1).getText().contentEquals("*")) {
-							String outerName = nameCtx.getText();
-							if (outerName.endsWith("*")) outerName = outerName.substring(0, outerName.lastIndexOf("*"));
-							expType.push(0);
-							for (Integer typeId : parseMethodCalls(node, generateDereferencedContext(outerName), sourceMethod, sourceClass)) {
-								if (typeId > -1) {
-									DeadlockClass outerClass = ClassDataTypes.get(typeId);
-
-									Integer derType;
-									if (outerName.endsWith("*")) {
-										derType = getDereferencedType(outerName, outerClass);
-									} else {
-										derType = getNameType(outerName, sourceClass);
-									}
-									ret.add(derType);
-								}
-							}
-							expType.pop();
-						}
-
-						DeadlockClass c = DeadlockStorage.locateClass(idName, sourceClass);
-
-						if(c != null && c.getMaskedTypeSet() == null) {     // if the creator is instancing a compound data type, let it throw a -2
-							ret.add(ClassDataTypeIds.get(c));
-						} else {
-							ret.add(getPrimitiveType(nameCtx.base_type().simple_type()));
-						}
-					}
-
-					expType.push(0);
-
-					int c = 0;
-					for (int i = 1; i < curCtx.getChildCount(); i++) {
-						ParserRuleContext chCtx = (ParserRuleContext) curCtx.getChild(i);
-
-						Set<Integer> metRetTypes = parseMethodCalls(node, chCtx, sourceMethod, sourceClass);
-						if (metRetTypes.size() > 0) {
-							for (Integer expType : metRetTypes) {
-								if(expType == null) System.out.println("null on " + expr.getText() + " src is " + DeadlockStorage.getCanonClassName(sourceClass));
-								if(expType != -1) {
-									if(expType != -2) {     // expType -2 means the former expression type has been excluded from the search
-										this.expType.push(expType);
-										c++;
-									} else {
-										ret.add(-2);
-										continue;
-									}
-								} else {
-									ret.add(expType);
-									continue;
-								}
-							}
-						}
-					}
-
-					for (int b = 0; b < c; b++) expType.pop();
-
-					expType.pop();
-
+                                        Integer type = expType.pop();
+                                        ret.add(type);
+                                        
+                                        for (int b = 0; b < c; b++) expType.pop();
+                                        
 					return ret;
 				}
 			}
 		} else if(exprCtx instanceof CSharpParser.Method_invocationContext) {
-			Set<Integer> r = getMethodReturnType(node, expType.peek(), exprCtx, sourceMethod, sourceClass);
+                        Set<Integer> r = getMethodReturnType(node, expType.peek(), exprCtx, sourceMethod, sourceClass);
 			ret.addAll(r);
 
 			if(ret.contains(-1)) {
@@ -362,7 +330,72 @@ public class CSharpGraph extends DeadlockGraphMaker {
 
 			ret.add(getRelevantType(type, templateTypes, c, expType.peek()));
 			return ret;
-		}
+		} else if(exprCtx instanceof CSharpParser.SimpleNameExpressionContext) {
+                        methodName = exprCtx.getText();
+                        ret.add(getNameType(exprCtx.getText(), sourceClass));
+                        return ret;
+                } else if(exprCtx instanceof CSharpParser.Member_accessContext) {
+                        CSharpParser.Member_accessContext maCtx = (CSharpParser.Member_accessContext) exprCtx;
+                        
+                        methodName = maCtx.identifier().getText();
+                        ret.add(getNameType(methodName, sourceClass));
+                        return ret;
+                } else if(exprCtx instanceof CSharpParser.MemberAccessExpressionContext) {
+                        CSharpParser.MemberAccessExpressionContext maeCtx = ((CSharpParser.MemberAccessExpressionContext) exprCtx);
+                        if (maeCtx.qualified_alias_member() != null) {
+                                ret.add(getNameType(maeCtx.qualified_alias_member().getText(), sourceClass));
+                        } else {
+                                ret.add(getNameType(maeCtx.predefined_type().getText(), sourceClass));
+                        }
+                        
+                        return ret;
+                } else if(exprCtx instanceof CSharpParser.LiteralExpressionContext) {
+                        ret.add(getLiteralType((CSharpParser.LiteralExpressionContext) exprCtx));
+                        return ret;
+                } else if(exprCtx instanceof CSharpParser.ThisReferenceExpressionContext) {
+                        ret.add(getThisType(sourceClass));
+                        return ret;
+                } else if(exprCtx instanceof CSharpParser.ObjectCreationExpressionContext) {
+                        CSharpParser.ObjectCreationExpressionContext cresCtx = (CSharpParser.ObjectCreationExpressionContext) exprCtx;
+
+                        CSharpParser.Type_Context nameCtx = cresCtx.type_();
+                        String idName = nameCtx.base_type().getText();
+
+                        if(exprCtx.getChild(exprCtx.getChildCount() - 1).getText().contentEquals("*")) {
+                                String outerName = nameCtx.getText();
+                                if (outerName.endsWith("*")) outerName = outerName.substring(0, outerName.lastIndexOf("*"));
+                                expType.push(0);
+                                for (Integer typeId : parseMethodCalls(node, generateDereferencedContext(outerName), sourceMethod, sourceClass)) {
+                                        if (typeId > -1) {
+                                                DeadlockClass outerClass = ClassDataTypes.get(typeId);
+
+                                                Integer derType;
+                                                if (outerName.endsWith("*")) {
+                                                        derType = getDereferencedType(outerName, outerClass);
+                                                } else {
+                                                        derType = getNameType(outerName, sourceClass);
+                                                }
+                                                ret.add(derType);
+                                        }
+                                }
+                                expType.pop();
+                        }
+
+                        DeadlockClass c = DeadlockStorage.locateClass(idName, sourceClass);
+
+                        if(c != null && c.getMaskedTypeSet() == null) {     // if the creator is instancing a compound data type, let it throw a -2
+                                ret.add(ClassDataTypeIds.get(c));
+                        } else {
+                                CSharpParser.Base_typeContext baseCtx = nameCtx.base_type();
+                                if (baseCtx.simple_type() != null) {
+                                        ret.add(getPrimitiveType(baseCtx.simple_type()));
+                                } else {
+                                        int i = 0;
+                                }
+                        }
+                        
+                        return ret;
+                }
 
 		ret.add(-1);
 		return ret;
