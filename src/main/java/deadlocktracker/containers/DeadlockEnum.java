@@ -8,7 +8,7 @@
     source code of licensed works and modifications, which include larger works using a licensed
     work, under the same license. Copyright and license notices must be preserved. Contributors
     provide an express grant of patent rights.
-*/
+ */
 package deadlocktracker.containers;
 
 import java.util.HashSet;
@@ -20,21 +20,21 @@ import java.util.Set;
  * @author RonanLana
  */
 public class DeadlockEnum extends DeadlockClass {
-    Set<String> enumItems = new HashSet();
-    
-    public DeadlockEnum(String className, String packageName, String classPathName, List<String> superNames, DeadlockClass parent) {
-        super(DeadlockClassType.ENUM, className, packageName, classPathName, superNames, false, parent);
-    }
-    
-    public void addEnumItem(String item) {
-        enumItems.add(item);
-    }
-    
-    public boolean containsEnumItem(String item) {
-        return enumItems.contains(item);
-    }
-    
-    public HashSet<String> getEnumItems() {
-        return new HashSet<>(enumItems);
-    }
+	Set<String> enumItems = new HashSet();
+
+	public DeadlockEnum(String className, String packageName, String classPathName, List<String> superNames, DeadlockClass parent) {
+		super(DeadlockClassType.ENUM, className, packageName, classPathName, superNames, false, parent);
+	}
+
+	public void addEnumItem(String item) {
+		enumItems.add(item);
+	}
+
+	public boolean containsEnumItem(String item) {
+		return enumItems.contains(item);
+	}
+
+	public HashSet<String> getEnumItems() {
+		return new HashSet<>(enumItems);
+	}
 }

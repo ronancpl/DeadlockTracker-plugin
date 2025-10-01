@@ -8,7 +8,7 @@
     source code of licensed works and modifications, which include larger works using a licensed
     work, under the same license. Copyright and license notices must be preserved. Contributors
     provide an express grant of patent rights.
-*/
+ */
 package deadlocktracker.containers;
 
 /**
@@ -16,20 +16,20 @@ package deadlocktracker.containers;
  * @author RonanLana
  */
 public class DeadlockLock {
-    Integer id;
-    String name;
-    
-    public DeadlockLock(Integer lockId, String lockName) {
-        id = lockId;
-        name = lockName;
-    }
-    
-    public Integer getId() {
-        return id;
-    }
-    
-    @Override
-    public String toString() {
-        return name;
-    }
+	Integer id;
+	String name;
+
+	public DeadlockLock(Integer lockId, String lockName) {
+		id = lockId;
+		name = lockName;
+	}
+
+	public Integer getId() {
+		return id;
+	}
+
+	@Override
+	public String toString() {
+		return name;
+	}
 }

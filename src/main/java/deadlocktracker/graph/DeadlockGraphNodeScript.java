@@ -8,7 +8,7 @@
     source code of licensed works and modifications, which include larger works using a licensed
     work, under the same license. Copyright and license notices must be preserved. Contributors
     provide an express grant of patent rights.
-*/
+ */
 package deadlocktracker.graph;
 
 /**
@@ -16,13 +16,13 @@ package deadlocktracker.graph;
  * @author RonanLana
  */
 public class DeadlockGraphNodeScript extends DeadlockGraphNode {
-    
-    public DeadlockGraphNodeScript() {
-        super(-1, DeadlockGraphNodeType.SCRIPT, -1);
-    }
-    
-    @Override
-    public String toString() {
-        return "SCRIPT";
-    }
+
+	public DeadlockGraphNodeScript() {
+		super(-1, DeadlockGraphNodeType.SCRIPT, -1);
+	}
+
+	@Override
+	public String toString() {
+		return "SCRIPT";
+	}
 }

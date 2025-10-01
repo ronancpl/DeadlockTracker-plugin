@@ -8,7 +8,7 @@
     source code of licensed works and modifications, which include larger works using a licensed
     work, under the same license. Copyright and license notices must be preserved. Contributors
     provide an express grant of patent rights.
-*/
+ */
 package deadlocktracker.graph;
 
 /**
@@ -16,15 +16,15 @@ package deadlocktracker.graph;
  * @author RonanLana
  */
 public class DeadlockGraphNodeCall extends DeadlockGraphNode {
-    Integer callFid;
-    
-    public DeadlockGraphNodeCall(Integer fid) {
-        super(fid, DeadlockGraphNodeType.CALL, -1);
-        callFid = fid;
-    }
-    
-    @Override
-    public String toString() {
-        return "C" + callFid;
-    }
+	Integer callFid;
+
+	public DeadlockGraphNodeCall(Integer fid) {
+		super(fid, DeadlockGraphNodeType.CALL, -1);
+		callFid = fid;
+	}
+
+	@Override
+	public String toString() {
+		return "C" + callFid;
+	}
 }
