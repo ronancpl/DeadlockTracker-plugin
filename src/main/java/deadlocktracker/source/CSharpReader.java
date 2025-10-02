@@ -30,6 +30,7 @@ import deadlocktracker.containers.DeadlockEnum;
 import deadlocktracker.containers.DeadlockFunction;
 import deadlocktracker.containers.DeadlockLock;
 import deadlocktracker.containers.DeadlockStorage;
+import static deadlocktracker.containers.DeadlockStorage.getPublicPackageName;
 import deadlocktracker.containers.Pair;
 import deadlocktracker.graph.DeadlockAbstractType;
 import deadlocktracker.strings.IgnoredTypes;
@@ -266,6 +267,7 @@ public class CSharpReader extends CSharpParserBaseListener {
 		if(currentClass != null) {
 			classStack.add(currentClass);
 			currentClass = new DeadlockClass(DeadlockClassType.CLASS, className, currentPackageName.peek(), getPathName(className), superNames, isAbstract, currentClass);
+                        currentClass.addImport(currentPackageName.peek().substring(0, currentPackageName.peek().length() - 1));
 		} else {
 			currentCompleteFileClassName = currentPackageName.peek() + className;
 
@@ -273,6 +275,7 @@ public class CSharpReader extends CSharpParserBaseListener {
 			if (idx > -1) className = className.substring(idx + 1);
 
 			currentClass = new DeadlockClass(DeadlockClassType.CLASS, className, currentPackageName.peek(), getPathName(className), superNames, isAbstract, null);
+                        currentClass.addImport(currentPackageName.peek().substring(0, currentPackageName.peek().length() - 1));
 		}
 
 		InheritanceTree.put(currentClass, new LinkedList<>());
@@ -366,9 +369,11 @@ public class CSharpReader extends CSharpParserBaseListener {
 		if(currentClass != null) {
 			classStack.add(currentClass);
 			currentClass = new DeadlockClass(DeadlockClassType.INTERFACE, className, currentPackageName.peek(), getPathName(className), superNames, true, currentClass);
+                        currentClass.addImport(currentPackageName.peek().substring(0, currentPackageName.peek().length() - 1));
 		} else {
 			currentCompleteFileClassName = currentPackageName.peek() + className;
 			currentClass = new DeadlockClass(DeadlockClassType.INTERFACE, className, currentPackageName.peek(), getPathName(className), superNames, true, null);
+                        currentClass.addImport(currentPackageName.peek().substring(0, currentPackageName.peek().length() - 1));
 		}
 
 		InheritanceTree.put(currentClass, new LinkedList<>());
@@ -901,10 +906,28 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 	private static void parseImportClass(DeadlockClass mdc) {
                 for(String s : mdc.getImportNames()) {
-			Pair<String, String> p = DeadlockStorage.locateClassPath(s);
-			if(p != null) {
-				String packageName = p.left;
-				String className = p.right;
+                        List<Pair<String, String>> p = new LinkedList<>();
+                        
+                        String packName = getPublicPackageName(s + ".");
+                        if (packName != null) {
+                                while (packName != null) {
+                                        p.add(new Pair<>(packName, "*"));
+                                        
+                                        int idx = s.lastIndexOf(".");
+                                        if (idx < 0) break;
+                                        
+                                        s = s.substring(0, idx);
+                                        
+                                        packName = getPublicPackageName(s + ".");
+                                }
+                        } else {
+                                Pair<String, String> ps = DeadlockStorage.locateClassPath(s);
+                                if (ps != null) p.add(ps);
+                        }
+                        
+			for (Pair<String, String> ps : p) {
+				String packageName = ps.left;
+				String className = ps.right;
 
 				Map<String, DeadlockClass> m = PublicClasses.get(packageName);
 
@@ -1393,8 +1416,6 @@ public class CSharpReader extends CSharpParserBaseListener {
 	}
 
 	public static DeadlockStorage compileProjectData() {
-		//System.out.println(storage);
-
 		parseImportClasses();
 
 		parseSuperClasses(PublicClasses);
@@ -1437,6 +1458,8 @@ public class CSharpReader extends CSharpParserBaseListener {
 		generateReflectedDataTypes();
 
 		solveRunnableFunctions();
+                
+                //System.out.println(storage);
 
 		return storage;
 	}

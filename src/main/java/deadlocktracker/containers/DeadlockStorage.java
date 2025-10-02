@@ -370,12 +370,7 @@ public class DeadlockStorage {
 
                                 return locatePrivateClassPath(packName, fullClassName);
                         }
-		} else {
-                        packName = getPublicPackageName(fullClassName + ".");
-                        if (packName != null) {
-                                return new Pair<>(packName, "*");
-                        }
-                }
+		}
 
 		return null;
 	}
