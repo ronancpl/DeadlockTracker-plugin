@@ -88,8 +88,8 @@ public abstract class DeadlockGraphMaker {
 	public abstract Set<Integer> getMethodReturnType(DeadlockGraphMethod node, Integer classType, ParserRuleContext methodCall, DeadlockFunction sourceMethod, DeadlockClass sourceClass);
 	public abstract Set<Integer> parseMethodCalls(DeadlockGraphMethod node, ParserRuleContext callCtx, DeadlockFunction sourceMethod, DeadlockClass sourceClass, boolean filter);	
 	public abstract String parseMethodName(ParserRuleContext callCtx);
-
-	protected List<Integer> getArgumentTypes(DeadlockGraphMethod node, ParserRuleContext expList, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
+        
+        protected List<Integer> getArgumentTypes(DeadlockGraphMethod node, ParserRuleContext expList, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
 		List<Integer> ret = new LinkedList<>();
 		for(ParserRuleContext exp : getArgumentList(expList)) {
 			for (Integer argType : parseMethodCalls(node, exp, sourceMethod, sourceClass)) {
@@ -358,6 +358,75 @@ public abstract class DeadlockGraphMaker {
 
 		return retType;
 	}
+        
+        protected Integer getTypeId(String name, DeadlockClass sourceClass) {
+                DeadlockClass mdc = DeadlockStorage.locateClass(name, sourceClass);
+                if (mdc != null) {
+                        return ClassDataTypeIds.get(mdc);
+                } else if (BasicDataTypeIds.containsKey(name)) {
+                        return BasicDataTypeIds.get(name);
+                } else {
+                        return -2;
+                }
+        }
+        
+        protected Integer getTypeFromIdentifier(int expType, String idName, DeadlockFunction sourceMethod) {
+                if(isIgnoredType(expType)) {
+                        return -2;
+                }
+
+                DeadlockClass c = getClassFromType(expType);
+                Set<Integer> templateTypes = null;
+
+                if(c == null) {
+                        List<Integer> cTypes = CompoundDataTypes.get(expType);
+                        if(cTypes != null) {
+                                c = getClassFromType(cTypes.get(cTypes.size() - 1));
+
+                                if(c == null) {
+                                        //System.out.println("Compound FAILED @ " + cTypes.get(cTypes.size() - 1));
+                                } else {
+                                        templateTypes = c.getMaskedTypeSet();
+                                }
+                        }
+
+                        if(c == null) {
+                                String typeName = BasicDataTypes.get(expType);
+
+                                if(typeName != null && typeName.charAt(typeName.length() - 1) == ']') {
+                                        if(idName.contentEquals("length")) {
+                                                return ElementalTypes[0];
+                                        }
+                                }
+
+                                //System.out.println("FAILED @ " + expType);
+                                return -2;
+                        }
+                } else {
+                        if(c.isEnum()) {    // it's an identifier defining an specific item from an enum, return self-type
+                                if(idName.contentEquals("length")) {
+                                        return ElementalTypes[0];
+                                }
+
+                                return expType;
+                        }
+
+                        templateTypes = c.getMaskedTypeSet();
+                }
+
+                Integer type = getPrimaryType(idName, sourceMethod, c);
+                if(type == null) {
+                        DeadlockClass mdc = DeadlockStorage.locateInternalClass(idName, c);  // element could be a private class reference
+                        if(mdc != null) {
+                                return ClassDataTypeIds.get(mdc);
+                        }
+
+                        //System.out.println("SOMETHING OUT OF CALL FOR FIELD " + curCtx.IDENTIFIER().getText() + " ON " + DeadlockStorage.getCanonClassName(c));
+                        return -1;
+                }
+
+                return getRelevantType(type, templateTypes, c, expType);
+        }
 
 	private Pair<DeadlockFunction, Set<Integer>> getMethodDefinitionFromClass(DeadlockClass c, String method, List<Integer> argTypes) {
 		DeadlockFunction mdf = c.getMethod(false, method, argTypes);
@@ -545,16 +614,17 @@ public abstract class DeadlockGraphMaker {
 			}
 		} else {
 			if(c.isEnum()) {
-				if(method.contentEquals("values")) {    // this will return a Collection of enums, since Collection is being ignored, so this is
+                                String methodName = method.toLowerCase();
+				if(methodName.contentEquals("values")) {    // this will return a Collection of enums, since Collection is being ignored, so this is
 					ret.add(-2);
 					return ret;
-				} else if(method.contentEquals("ordinal")) {
+				} else if(methodName.contentEquals("ordinal")) {
 					ret.add(ElementalTypes[0]);
 					return ret;
-				} else if(method.contentEquals("name")) {
+				} else if(methodName.contentEquals("name")) {
 					ret.add(ElementalTypes[3]);
 					return ret;
-				} else if(method.contentEquals("equals")) {
+				} else if(methodName.contentEquals("equals")) {
 					ret.add(ElementalTypes[4]);
 					return ret;
 				}
@@ -621,7 +691,7 @@ public abstract class DeadlockGraphMaker {
 	}
 
 	protected Integer getPreparedReturnType(String methodName, Integer thisType) {
-		switch(methodName) {
+                switch(methodName) {
 		case "isEmpty":
 		case "equals":
 		case "equalsIgnoreCase":
@@ -711,6 +781,7 @@ public abstract class DeadlockGraphMaker {
 				}
 
 				String methodName = parseMethodName(call);
+                                methodName = methodName.toLowerCase();
 
 				if(base.contentEquals("Math")) {
 					if(methodName.contentEquals("floor") || methodName.contentEquals("ceil")) {

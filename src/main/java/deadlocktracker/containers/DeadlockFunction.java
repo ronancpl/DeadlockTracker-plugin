@@ -54,7 +54,7 @@ public class DeadlockFunction {
 	private Integer returnType;
 
 	public DeadlockFunction(String functName, DeadlockClass mdc, DeadlockFunction par, boolean abstracted) {
-		name = functName;
+                name = functName;
 		source = mdc;
 		parent = par;
 		isAbstract = abstracted;
@@ -230,7 +230,7 @@ public class DeadlockFunction {
 	}
 
 	public byte hasExactHeading(String functName, List<Integer> params) {
-		if(name.contentEquals(functName) && params.size() == paramTypes.size()) {
+                if(name.contentEquals(functName) && params.size() == paramTypes.size()) {
 			byte strongRef = 1;
 			for(int i = 0; i < params.size(); i++) {
 				Integer parType = paramTypes.get(i);

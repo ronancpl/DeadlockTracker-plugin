@@ -1,3 +1,14 @@
+/*
+    This file is part of the DeadlockTracker detection tool
+    Copyleft (L) 2025 RonanLana
+
+    GNU General Public License v3.0
+
+    Permissions of this strong copyleft license are conditioned on making available complete
+    source code of licensed works and modifications, which include larger works using a licensed
+    work, under the same license. Copyright and license notices must be preserved. Contributors
+    provide an express grant of patent rights.
+ */
 package deadlocktracker.graph.maker;
 
 import java.io.IOException;
@@ -140,8 +151,8 @@ public class JavaGraph extends DeadlockGraphMaker {
 
 		return retTypes;
 	}
-
-	@Override
+        
+        @Override
 	public Set<Integer> parseMethodCalls(DeadlockGraphMethod node, ParserRuleContext callCtx, DeadlockFunction sourceMethod, DeadlockClass sourceClass, boolean filter) {
 		JavaParser.ExpressionContext call = (JavaParser.ExpressionContext) callCtx;
 		JavaParser.ExpressionContext curCtx = call;
@@ -175,71 +186,11 @@ public class JavaGraph extends DeadlockGraphMaker {
 
 										continue;
 									} else if(curCtx.IDENTIFIER() != null) {
-										if(isIgnoredType(expType)) {
-											ret.add(-2);
-											continue;
-										}
-
-										DeadlockClass c = getClassFromType(expType);
-										Set<Integer> templateTypes = null;
-
-										if(c == null) {
-											List<Integer> cTypes = CompoundDataTypes.get(expType);
-											if(cTypes != null) {
-												c = getClassFromType(cTypes.get(cTypes.size() - 1));
-
-												if(c == null) {
-													//System.out.println("Compound FAILED @ " + cTypes.get(cTypes.size() - 1));
-												} else {
-													templateTypes = c.getMaskedTypeSet();
-												}
-											}
-
-											if(c == null) {
-												String typeName = BasicDataTypes.get(expType);
-
-												if(typeName != null && typeName.charAt(typeName.length() - 1) == ']') {
-													if(curCtx.IDENTIFIER().getText().contentEquals("length")) {
-														ret.add(ElementalTypes[0]);
-														continue;
-													}
-												}
-
-												//System.out.println("FAILED @ " + expType);
-												System.out.println("[Warning] No datatype found for " + curCtx.IDENTIFIER() + " on expression " + curCtx.getText() + " srcclass " + DeadlockStorage.getCanonClassName(sourceClass) + " detected exptype " + expType);
-												ret.add(-2);
-												continue;
-											}
-										} else {
-											if(c.isEnum()) {    // it's an identifier defining an specific item from an enum, return self-type
-												if(curCtx.IDENTIFIER().getText().contentEquals("length")) {
-													ret.add(ElementalTypes[0]);
-													continue;
-												}
-
-												ret.add(expType);
-												continue;
-											}
-
-											templateTypes = c.getMaskedTypeSet();
-										}
-
-										String element = curCtx.IDENTIFIER().getText();
-
-										Integer type = getPrimaryTypeOnFieldVars(element, c);
-										if(type == null) {
-											DeadlockClass mdc = DeadlockStorage.locateInternalClass(element, c);  // element could be a private class reference
-											if(mdc != null) {
-												ret.add(ClassDataTypeIds.get(mdc));
-												continue;
-											}
-
-											//System.out.println("SOMETHING OUT OF CALL FOR FIELD " + curCtx.IDENTIFIER().getText() + " ON " + DeadlockStorage.getCanonClassName(c));
-											ret.add(-1);
-											continue;
-										}
-
-										ret.add(getRelevantType(type, templateTypes, c, expType));
+                                                                                Integer idType = getTypeFromIdentifier(expType, curCtx.IDENTIFIER().getText(), sourceMethod);
+                                                                                if (idType == -2) {
+                                                                                    System.out.println("[Warning] No datatype found for " + curCtx.IDENTIFIER() + " on expression " + curCtx.getText() + " srcclass " + DeadlockStorage.getCanonClassName(sourceClass) + " detected exptype " + expType);
+                                                                                }
+                                                                                ret.add(idType);
 										continue;
 									} else if(curCtx.THIS() != null) {
 										ret.add(expType);
@@ -324,14 +275,7 @@ public class JavaGraph extends DeadlockGraphMaker {
 				if (outerName.endsWith("]")) {
 					derType = getDereferencedType(outerName, outerClass);
 				} else {
-					DeadlockClass mdc = DeadlockStorage.locateClass(outerName, sourceClass);
-					if (mdc != null) {
-						derType = ClassDataTypeIds.get(mdc);
-					} else if (BasicDataTypeIds.containsKey(outerName)) {
-						derType = BasicDataTypeIds.get(outerName);
-					} else {
-						derType = -2;
-					}
+					derType = getTypeId(outerName, outerClass);
 				}
 
 				ret.add(derType);
@@ -406,15 +350,8 @@ public class JavaGraph extends DeadlockGraphMaker {
 				}
 
 				String idName = nameCtx.IDENTIFIER(0).getText();
-				DeadlockClass c = DeadlockStorage.locateClass(idName, sourceClass);
-
-				if(c != null && c.getMaskedTypeSet() == null) {     // if the creator is instancing a compound data type, let it throw a -2
-					ret.add(ClassDataTypeIds.get(c));
-					return ret;
-				} else {
-					ret.add(-2);
-					return ret;
-				}
+				ret.add(getTypeId(idName, sourceClass));
+                                return ret;
 			} else {
 				ret.add(getPrimitiveType(nameCtx.primitiveType()));
 				return ret;

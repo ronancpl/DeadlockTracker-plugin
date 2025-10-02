@@ -262,7 +262,7 @@ public class DeadlockClass {
 		return null;
 	}
 
-	public DeadlockFunction getTemplateMethodOnSuperclass(String name, List<Integer> params) {
+	private DeadlockFunction getTemplateMethodOnSuperclass(String name, List<Integer> params) {
 		DeadlockFunction mdf;
 
 		for(DeadlockClass mdc : superClass) {
@@ -282,9 +282,8 @@ public class DeadlockClass {
 		DeadlockFunction ref = null;
 
 		for(DeadlockFunction mdf : methods) {
-			byte exactState = mdf.hasExactHeading(name, params);
-
-			if(exactState == 1) {
+                        byte exactState = mdf.hasExactHeading(name, params);
+                        if(exactState == 1) {
 				return mdf;
 			} else if(exactState == 0) {
 				ref = mdf;

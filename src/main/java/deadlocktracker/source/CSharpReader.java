@@ -439,7 +439,7 @@ public class CSharpReader extends CSharpParserBaseListener {
 		return ret;
 	}
 
-	private void enterMethodDeclaration(List<String> list, CSharpParser.Method_declarationContext ctx) {
+	private void enterMethodDeclaration(List<String> list, CSharpParser.Method_declarationContext ctx, String retTypeName) {
 		String className = list.get(0);
 		String methodName = list.get(1);
 
@@ -449,15 +449,17 @@ public class CSharpReader extends CSharpParserBaseListener {
 		} else {
 			mdc = currentClass;
 		}
-
-		DeadlockFunction method = new DeadlockFunction(methodName, mdc, methodStack.isEmpty() ? null : methodStack.peek(), currentAbstract);
-		Pair<Integer, Pair<List<Integer>, Map<Long, Integer>>> retParamTypes = getMethodMetadata(ctx, method);
+                
+                DeadlockFunction method = new DeadlockFunction(methodName, mdc, methodStack.isEmpty() ? null : methodStack.peek(), currentAbstract);
+		Pair<Integer, Pair<List<Integer>, Map<Long, Integer>>> retParamTypes = getMethodMetadata(ctx, retTypeName, method);
 
 		method.setMethodMetadata(retParamTypes.left, retParamTypes.right.left, retParamTypes.right.right);
 		methodStack.add(method);
 
 		methodCallCountStack.add(runningMethodCallCount.get());
 		runningMethodCallCount.set(0);
+                
+                if (mdc != null) mdc.addClassMethod(method);
 	}
 
 	private void exitMethodDeclaration() {
@@ -477,11 +479,17 @@ public class CSharpReader extends CSharpParserBaseListener {
 	@Override
 	public void enterMethod_declaration(CSharpParser.Method_declarationContext ctx) {
 		List<String> list = new ArrayList<>();
-		for (CSharpParser.IdentifierContext name : ctx.method_member_name().identifier()) {
+                
+                for (CSharpParser.IdentifierContext name : ctx.method_member_name().identifier()) {
 			list.add(name.getText());
 		}
 
-		enterMethodDeclaration(fullClassMethodName(list), ctx);
+                String typeName = "void";
+                if (ctx.getParent() instanceof CSharpParser.Typed_member_declarationContext)  {
+                        typeName = ((CSharpParser.Typed_member_declarationContext) ctx.getParent()).type_().getText();
+                }
+                
+		enterMethodDeclaration(fullClassMethodName(list), ctx, typeName);
 	}
 
 	@Override
@@ -653,8 +661,8 @@ public class CSharpReader extends CSharpParserBaseListener {
 	}
 
 	// lambda methods
-	private static Pair<Integer, Pair<List<Integer>, Map<Long, Integer>>> getMethodMetadata(CSharpParser.Method_declarationContext ctx, DeadlockFunction method) {
-		Integer type = getTypeId("void", currentCompleteFileClassName);
+	private static Pair<Integer, Pair<List<Integer>, Map<Long, Integer>>> getMethodMetadata(CSharpParser.Method_declarationContext ctx, String retTypeName, DeadlockFunction method) {
+		Integer type = getTypeId(retTypeName, currentCompleteFileClassName);
 		Pair<List<Integer>, Map<Long, Integer>> params = getMethodParameterTypes(ctx.formal_parameter_list(), method);
 
 		return new Pair<>(type, params);
@@ -1408,7 +1416,6 @@ public class CSharpReader extends CSharpParserBaseListener {
                 for(Entry<Integer, Pair<String, String>> v : volatileDataTypes.entrySet()) {
                         System.out.println(v.getKey() + " : " + v.getValue());
                 }
-                */
                 
                 for(Map<String, DeadlockClass> o : PublicClasses.values()) {
                         for(DeadlockClass mdc : o.values()) {
@@ -1421,6 +1428,7 @@ public class CSharpReader extends CSharpParserBaseListener {
                                 System.out.println(mdc);
                         }
                 }
+                */
                 
 		parseDataTypes();
 		fetchDataType("Set<Object>", null);
