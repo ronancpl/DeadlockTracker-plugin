@@ -21,6 +21,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Stack;
 
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -469,7 +470,6 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 	private void exitMethodDeclaration() {
 		DeadlockFunction method = methodStack.pop();
-		DeadlockClass mdc = method.getSourceClass();
 
 		String methodName = method.getName();
 		if(methodName.contentEquals("run") && method.getParameters().isEmpty()) {
@@ -479,6 +479,17 @@ public class CSharpReader extends CSharpParserBaseListener {
 		}
 
 		runningMethodCallCount.set(methodCallCountStack.pop());
+	}
+        
+        @Override
+	public void enterProperty_declaration(CSharpParser.Property_declarationContext ctx) {
+		String typeText = ((CSharpParser.Typed_member_declarationContext) ctx.getParent()).type_().getText();
+                String vdName = ctx.member_name().getText();
+                
+                String tt = getFullTypeText(typeText, vdName);
+                int type = getTypeId(tt, currentCompleteFileClassName);
+
+                if (currentClass != null) currentClass.addFieldVariable(type, vdName);
 	}
 
 	@Override
@@ -556,6 +567,16 @@ public class CSharpReader extends CSharpParserBaseListener {
 				.collect(Collectors.toList());
 
 		processVariableDeclarations(true, ((CSharpParser.Typed_member_declarationContext) ctx.getParent()).type_().getText(), vdNames);
+	}
+        
+        @Override
+	public void enterEmbedded_statement(CSharpParser.Embedded_statementContext ctx) {
+                if (ctx.simple_embedded_statement() != null && ctx.simple_embedded_statement() instanceof CSharpParser.ForeachStatementContext) {
+                        CSharpParser.ForeachStatementContext fctx = (CSharpParser.ForeachStatementContext) ctx.simple_embedded_statement();
+                        if (fctx.local_variable_type().type_() != null) {
+                                processVariableDeclarations(true, fctx.local_variable_type().type_().getText(), Collections.singletonList(fctx.identifier().IDENTIFIER().getText()));
+                        }
+                }
 	}
 
 	@Override

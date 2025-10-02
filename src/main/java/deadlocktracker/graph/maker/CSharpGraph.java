@@ -360,17 +360,11 @@ public class CSharpGraph extends DeadlockGraphMaker {
                         CSharpParser.Member_accessContext maCtx = (CSharpParser.Member_accessContext) exprCtx;
                         
                         methodName = maCtx.identifier().getText();
-                        Set<Integer> r = getMethodReturnType(node, expType.peek(), exprCtx, sourceMethod, sourceClass);
-			ret.addAll(r);
-
-			if(ret.contains(-1)) {
-				DeadlockClass c = getClassFromType(expType.peek());
-				if(c != null && c.isInterface()) {  // it's an interface, there's no method implementation to be found there
-					ret.remove(-1);
-					ret.add(-2);
-				}
-			}
-
+                        
+                        Integer typeId = getTypeFromIdentifier(expType.peek(), maCtx.identifier().getText(), sourceMethod);
+                        if (typeId == -1) typeId = expType.peek();
+                        ret.add(typeId);
+                        
                         return ret;
                 } else if(exprCtx instanceof CSharpParser.MemberAccessExpressionContext) {
                         CSharpParser.MemberAccessExpressionContext maeCtx = ((CSharpParser.MemberAccessExpressionContext) exprCtx);
