@@ -272,7 +272,10 @@ public class CSharpGraph extends DeadlockGraphMaker {
                                         for (int b = 0; b < c; b++) expType.pop();
                                         
 					return ret;
-				}
+				} else {
+                                        ret.addAll(parseMethodCalls(node, ((CSharpParser.Unary_expressionContext) exprCtx).unary_expression(), sourceMethod, sourceClass, filter));
+                                        return ret;
+                                }
 			}
 		} else if(exprCtx instanceof CSharpParser.Method_invocationContext) {
                         Set<Integer> r = getMethodReturnType(node, expType.peek(), exprCtx, sourceMethod, sourceClass);
@@ -353,6 +356,7 @@ public class CSharpGraph extends DeadlockGraphMaker {
                         methodName = exprCtx.getText();
                         
                         Integer typeId = getTypeFromIdentifier(expType.peek(), exprCtx.getText(), sourceMethod);
+                        if (typeId == -1) typeId = expType.peek();
                         ret.add(typeId);
                         
                         return ret;
