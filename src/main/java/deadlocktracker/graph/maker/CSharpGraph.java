@@ -443,6 +443,17 @@ public class CSharpGraph extends DeadlockGraphMaker {
                         }
                         
                         return ret;
+                } else if(exprCtx instanceof CSharpParser.ParenthesisExpressionsContext) {
+                        CSharpParser.ParenthesisExpressionsContext parCtx = (CSharpParser.ParenthesisExpressionsContext) exprCtx;
+                        List<ParserRuleContext> list = new LinkedList<>();
+                        fetchUnaryExpressionsFromContext(parCtx.expression(), list);
+
+                        for (ParserRuleContext ctx : list) {
+                                CSharpParser.Unary_expressionContext unaryCtx = (CSharpParser.Unary_expressionContext) ctx;
+                                for (Integer typeId : parseMethodCalls(node, unaryCtx, sourceMethod, sourceClass)) {
+                                        ret.add(typeId);
+                                }
+                        }
                 }
 
 		ret.add(-1);
