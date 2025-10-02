@@ -427,6 +427,22 @@ public class CSharpGraph extends DeadlockGraphMaker {
                         }
                         
                         return ret;
+                } else if(exprCtx instanceof CSharpParser.Bracket_expressionContext) {
+                        CSharpParser.Bracket_expressionContext brCtx = (CSharpParser.Bracket_expressionContext) exprCtx;
+                        
+                        for (CSharpParser.Indexer_argumentContext idxCtx : brCtx.indexer_argument()) {
+                                List<ParserRuleContext> list = new LinkedList<>();
+                                fetchUnaryExpressionsFromContext(idxCtx.expression(), list);
+                                
+                                for (ParserRuleContext ctx : list) {
+                                        CSharpParser.Unary_expressionContext unaryCtx = (CSharpParser.Unary_expressionContext) ctx;
+                                        for (Integer typeId : parseMethodCalls(node, unaryCtx, sourceMethod, sourceClass)) {
+                                                ret.add(typeId);
+                                        }
+                                }
+                        }
+                        
+                        return ret;
                 }
 
 		ret.add(-1);
