@@ -160,12 +160,19 @@ public class CSharpReader extends CSharpParserBaseListener {
 	@Override
 	public void enterUsing_directives(CSharpParser.Using_directivesContext ctx) {
 		for (CSharpParser.Using_directiveContext ctxd : ctx.using_directive()) {
+                        String s = "";
 			if (ctxd instanceof CSharpParser.UsingAliasDirectiveContext) {
 				CSharpParser.UsingAliasDirectiveContext ctxa = (CSharpParser.UsingAliasDirectiveContext) ctxd;
-
-				String s = ctxa.namespace_or_type_name().getText();
-				currentImportList.add(s);
+				s = ctxa.namespace_or_type_name().getText();
+			} else if (ctxd instanceof CSharpParser.UsingNamespaceDirectiveContext) {
+				CSharpParser.UsingNamespaceDirectiveContext ctxn = (CSharpParser.UsingNamespaceDirectiveContext) ctxd;
+				s = ctxn.namespace_or_type_name().getText();
+			} else if (ctxd instanceof CSharpParser.UsingStaticDirectiveContext) {
+				CSharpParser.UsingStaticDirectiveContext ctxs = (CSharpParser.UsingStaticDirectiveContext) ctxd;
+				s = ctxs.namespace_or_type_name().getText();
 			}
+                        
+                        currentImportList.add(s);
 		}
 	}
 
@@ -659,6 +666,15 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 		return new Pair<>(type, params);
 	}
+        
+        private static void addMethodParameter(String typeName, String typeText, String nameText, DeadlockFunction method, Map<Long, Integer> params, List<Integer> pTypes) {
+                String tt = getFullTypeText(typeName, typeText);
+                int typeId = getTypeId(tt, currentCompleteFileClassName);
+                pTypes.add(typeId);
+
+                Long val = method.addLocalVariable(typeId, nameText);
+                params.put(val, typeId);
+        }
 
 	private static Pair<List<Integer>, Map<Long, Integer>> getMethodParameterTypes(CSharpParser.Formal_parameter_listContext ctx, DeadlockFunction method) {
 		Map<Long, Integer> params = new HashMap<>();
@@ -666,19 +682,23 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 		if(ctx != null) {
 			CSharpParser.Parameter_arrayContext aCtx = ctx.parameter_array();
-			while(aCtx != null) {
-				String typeText = aCtx.array_type().getText();
-				String nameText = aCtx.identifier().getText();
+                        if (aCtx != null) {
+                                while(aCtx != null) {
+                                        String typeText = aCtx.array_type().getText();
+                                        String nameText = aCtx.identifier().getText();
 
-				String tt = getFullTypeText(aCtx.array_type().base_type().getText(), typeText);
-				int typeId = getTypeId(tt, currentCompleteFileClassName);
-				pTypes.add(typeId);
-
-				Long val = method.addLocalVariable(typeId, nameText);
-				params.put(val, typeId);
-
-				aCtx = ctx.parameter_array();
-			}
+                                        addMethodParameter(aCtx.array_type().base_type().getText(), typeText, nameText, method, params, pTypes);
+                                        
+                                        aCtx = ctx.parameter_array();
+                                }
+                        } else {
+                                for (CSharpParser.Fixed_parameterContext paramCtx : ctx.fixed_parameters().fixed_parameter()) {
+                                        String typeText = paramCtx.arg_declaration().type_().getText();
+                                        String nameText = paramCtx.arg_declaration().identifier().getText();
+                                        
+                                        addMethodParameter(paramCtx.arg_declaration().type_().base_type().getText(), typeText, nameText, method, params, pTypes);
+                                }
+                        }
 		}
 
 		return new Pair<>(pTypes, params);
@@ -872,7 +892,7 @@ public class CSharpReader extends CSharpParserBaseListener {
 	}
 
 	private static void parseImportClass(DeadlockClass mdc) {
-		for(String s : mdc.getImportNames()) {
+                for(String s : mdc.getImportNames()) {
 			Pair<String, String> p = DeadlockStorage.locateClassPath(s);
 			if(p != null) {
 				String packageName = p.left;
@@ -1385,23 +1405,23 @@ public class CSharpReader extends CSharpParserBaseListener {
 		referenceReadWriteLocks();
 
 		/*
-        for(Entry<Integer, Pair<String, String>> v : volatileDataTypes.entrySet()) {
-            System.out.println(v.getKey() + " : " + v.getValue());
-        }
+                for(Entry<Integer, Pair<String, String>> v : volatileDataTypes.entrySet()) {
+                        System.out.println(v.getKey() + " : " + v.getValue());
+                }
+                */
+                
+                for(Map<String, DeadlockClass> o : PublicClasses.values()) {
+                        for(DeadlockClass mdc : o.values()) {
+                                System.out.println(mdc);
+                        }
+                }
 
-        for(Map<String, DeadlockClass> o : PublicClasses.values()) {
-            for(DeadlockClass mdc : o.values()) {
-                System.out.println(mdc);
-            }
-        }
-
-        for(Map<String, DeadlockClass> o : PrivateClasses.values()) {
-            for(DeadlockClass mdc : o.values()) {
-                System.out.println(mdc);
-            }
-        }
-		 */
-
+                for(Map<String, DeadlockClass> o : PrivateClasses.values()) {
+                        for(DeadlockClass mdc : o.values()) {
+                                System.out.println(mdc);
+                        }
+                }
+                
 		parseDataTypes();
 		fetchDataType("Set<Object>", null);
 

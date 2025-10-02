@@ -1097,7 +1097,7 @@ public class JavaReader extends JavaParserBaseListener {
 	}
 
 	private static Integer fetchDataType(String type, DeadlockClass pc) {
-		List<Integer> compoundType = new LinkedList<>();
+                List<Integer> compoundType = new LinkedList<>();
 		String t = type;
 
 		Integer ret = -2;

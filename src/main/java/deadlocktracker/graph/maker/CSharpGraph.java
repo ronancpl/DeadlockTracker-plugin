@@ -70,8 +70,9 @@ public class CSharpGraph extends DeadlockGraphMaker {
                 if (ctx instanceof CSharpParser.Unary_expressionContext) {
                         list.add(ctx);
                 } else {
+                        int size = list.size();
                         for (int i = 0; i < ctx.getChildCount(); i++) {
-                                if (ctx.getChild(i) instanceof ParserRuleContext) {
+                                if (ctx.getChild(i) instanceof ParserRuleContext && list.size() == size) {
                                         ParserRuleContext child = (ParserRuleContext) ctx.getChild(i);
                                         fetchUnaryExpressionsFromContext(child, list);
                                 }
@@ -122,7 +123,7 @@ public class CSharpGraph extends DeadlockGraphMaker {
 			String methodName = this.methodName;
                         
                         //System.out.println("CALL METHODRETURNTYPE for " + classType + " methodcall " + methodName + " with " + exp.getText());
-			List<Integer> argTypes = getArgumentTypes(node, exp.argument_list(), sourceMethod, sourceClass);
+                        List<Integer> argTypes = getArgumentTypes(node, exp.argument_list(), sourceMethod, sourceClass);
 
 			if(!ReflectedClasses.containsKey(classType)) {
 				DeadlockAbstractType absType = AbstractDataTypes.get(classType);
@@ -223,10 +224,6 @@ public class CSharpGraph extends DeadlockGraphMaker {
                                         int c = 0;
                                         for (int i = 0; i < curCtx.getChildCount(); i++) {
                                                 ParserRuleContext chCtx = (ParserRuleContext) curCtx.getChild(i);
-                                                if (chCtx.getText().contains("true")) {
-                                                    int j = 0;
-                                                }
-
                                                 Set<Integer> metRetTypes = parseMethodCalls(node, chCtx, sourceMethod, sourceClass);
                                                 if (metRetTypes.size() > 0) {
                                                         for (Integer expType : metRetTypes) {
@@ -389,8 +386,6 @@ public class CSharpGraph extends DeadlockGraphMaker {
                                 CSharpParser.Base_typeContext baseCtx = nameCtx.base_type();
                                 if (baseCtx.simple_type() != null) {
                                         ret.add(getPrimitiveType(baseCtx.simple_type()));
-                                } else {
-                                        int i = 0;
                                 }
                         }
                         

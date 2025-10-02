@@ -358,7 +358,7 @@ public class DeadlockStorage {
 	}
 
 	public static Pair<String, String> locateClassPath(String fullClassName) {
-		String packName = getPublicPackageName(fullClassName);
+                String packName = getPublicPackageName(fullClassName);
 		if(packName != null) {
                         if (!packName.contentEquals(fullClassName)) {
                                 int idx = packName.length();
@@ -369,10 +369,13 @@ public class DeadlockStorage {
                                 if (c != null) return new Pair<>(packName, className);
 
                                 return locatePrivateClassPath(packName, fullClassName);
-                        } else {
+                        }
+		} else {
+                        packName = getPublicPackageName(fullClassName + ".");
+                        if (packName != null) {
                                 return new Pair<>(packName, "*");
                         }
-		}
+                }
 
 		return null;
 	}

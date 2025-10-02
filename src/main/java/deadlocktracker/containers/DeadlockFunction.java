@@ -301,14 +301,12 @@ public class DeadlockFunction {
 	@Override
 	public String toString() {
 		String s = "\t\t" + name + " : ";
+		
+                for(Integer i: paramTypes) {
+                        s += (i + ", ");
+                }
 
-		/*
-        for(Integer i: paramTypes) {
-            s += (e + ", ");
-        }
-
-        s += "\n\t\t\t";
-		 */
+                s += "\n\t\t\t";
 
 		for(ParserRuleContext e : methodCalls) {
 			s += (e.getText() + ", ");
