@@ -50,7 +50,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
  */
 public class CSharpReader extends CSharpParserBaseListener {
 	private static DeadlockStorage storage = new DeadlockStorage();
-	private static String syncLockTypeName = "SyncLock";
+	private static String syncLockTypeName = "SynchLock";
 
 	// ---- cached storage fields ----
 	private static Map<String, Map<String, DeadlockClass>> PublicClasses = storage.getPublicClasses();
@@ -578,8 +578,6 @@ public class CSharpReader extends CSharpParserBaseListener {
                                 }
                         } else if (ctx.simple_embedded_statement() instanceof CSharpParser.LockStatementContext) {
                                 String syncLockName = DeadlockGraphMaker.getSyncLockName(((CSharpParser.LockStatementContext) ctx.simple_embedded_statement()).expression().getText(), methodStack.peek().getId());
-
-                                processLock(syncLockTypeName, syncLockName, syncLockName);   // create a lock representation of the synchronized modifier
                                 methodStack.peek().addMethodCall(generateSyncLockExpression(syncLockName, true));
                         }
                 }
@@ -629,9 +627,9 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 		if(!readLockWaitingSet.isEmpty() || !writeLockWaitingSet.isEmpty()) {
 			if(readLockWaitingSet.contains(lockName)) {
-				processLock("ReadLock1", elementName, value);
+				processLock(currentClass, "ReadLock1", elementName, value);
 			} else if(writeLockWaitingSet.contains(lockName)) {
-				processLock("WriteLock1", elementName, value);
+				processLock(currentClass, "WriteLock1", elementName, value);
 			}
 		}
 	}
@@ -808,7 +806,7 @@ public class CSharpReader extends CSharpParserBaseListener {
 	private static void processVariableDeclarations(boolean isFieldVar, String typeText, List<String> vdList) {
 		if(typeText.contains("Lock")) {
 			for(String vdName : vdList) {
-				processLock(typeText, vdName, vdName);
+				processLock(currentClass, typeText, vdName, vdName);
 			}
 		}
 
@@ -838,12 +836,12 @@ public class CSharpReader extends CSharpParserBaseListener {
 		return null;
 	}
 
-	private static void processLock(String typeText, String name, String reference) {
+	public static void processLock(DeadlockClass mdc, String typeText, String name, String reference) {
 		boolean isRead = typeText.contains("Read");
 		boolean isWrite = typeText.contains("Write");
 
-		String lockName = DeadlockStorage.getCanonClassName(currentClass) + "." + name;
-		String  refName = DeadlockStorage.getCanonClassName(currentClass) + "." + reference;
+		String lockName = DeadlockStorage.getCanonClassName(mdc) + "." + name;
+		String  refName = DeadlockStorage.getCanonClassName(mdc) + "." + reference;
 
 		//System.out.println("Parsing lock : '" + typeText + "' name: '" + lockName + "' ref: '" + refName + "'");
 
@@ -890,10 +888,10 @@ public class CSharpReader extends CSharpParserBaseListener {
 			Locks.put(lockName, instanceNewLock(lockName));
 		}
                 
-                currentClass.addFieldVariable(0, name);
+                mdc.addFieldVariable(0, name);
 	}
 
-	private static DeadlockLock instanceNewLock(String lockName) {
+	public static DeadlockLock instanceNewLock(String lockName) {
 		return new DeadlockLock(runningId.getAndIncrement(), lockName);
 	}
 
@@ -1491,8 +1489,6 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 		solveRunnableFunctions();
                 
-                //System.out.println(storage);
-
-		return storage;
+                return storage;
 	}
 }

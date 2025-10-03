@@ -281,14 +281,6 @@ public class CSharpGraph extends DeadlockGraphMaker {
                         Set<Integer> r = getMethodReturnType(node, expType.peek(), exprCtx, sourceMethod, sourceClass);
 			ret.addAll(r);
 
-			if(ret.contains(-1)) {
-				DeadlockClass c = getClassFromType(expType.peek());
-				if(c != null && c.isInterface()) {  // it's an interface, there's no method implementation to be found there
-					ret.remove(-1);
-					ret.add(-2);
-				}
-			}
-
 			return ret;
 		} else if(exprCtx instanceof CSharpParser.IdentifierContext) {
 			if(isIgnoredType(expType.peek())) {

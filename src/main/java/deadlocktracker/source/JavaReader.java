@@ -47,7 +47,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
  */
 public class JavaReader extends JavaParserBaseListener {
 	private static DeadlockStorage storage = new DeadlockStorage();
-	private static String syncLockTypeName = "SyncLock";
+	private static String syncLockTypeName = "SynchLock";
 
 	// ---- cached storage fields ----
 	private static Map<String, Map<String, DeadlockClass>> PublicClasses = storage.getPublicClasses();
