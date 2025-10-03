@@ -35,8 +35,12 @@ import deadlocktracker.graph.DeadlockGraphNodeLock;
 import deadlocktracker.graph.DeadlockGraphNodeScript;
 import deadlocktracker.graph.DeadlockGraphMethod;
 import deadlocktracker.strings.LinkedTypes;
+import language.csharp.CSharpLexer;
+import language.csharp.CSharpParser;
 
 import language.java.JavaParser;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
@@ -259,7 +263,7 @@ public abstract class DeadlockGraphMaker {
 	}
 
 	protected Integer getPrimaryTypeOnFieldVars(String name, DeadlockClass sourceClass) {
-		Integer t = sourceClass.getFieldVariable(name);
+                Integer t = sourceClass.getFieldVariable(name);
 		if(t != null) return t;
 
 		if (isImportEnum(name, sourceClass)) {
@@ -758,6 +762,17 @@ public abstract class DeadlockGraphMaker {
 			}
 		}
 	}
+        
+        private String getLockFieldName(String resourceName) {
+                String[] sp = resourceName.split("_");
+                String lockFieldName = "";
+                for (int i = 0; i < sp.length - 2; i++) {
+                        lockFieldName += sp[i] + "_";
+                }
+                lockFieldName = lockFieldName.substring(0, lockFieldName.length() - 1);
+                
+                return lockFieldName;
+        }
 
 	protected Set<Integer> parseMethodCalls(DeadlockGraphMethod node, ParserRuleContext call, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
 		Set<Integer> metRetTypes = parseMethodCalls(node, call, sourceMethod, sourceClass, true);
@@ -765,6 +780,16 @@ public abstract class DeadlockGraphMaker {
 		Set<Integer> retTypes = new HashSet<>();
 		for (Integer ret : metRetTypes) {
 			if(ret == -1 && metRetTypes.size() == 1) {
+                                String prefixLockName = DeadlockGraphMaker.getSyncLockName();
+		
+                                if (call.getText().contains(prefixLockName)) {
+                                        String lockFieldName = getLockFieldName(call.getText());
+                                        if (sourceClass.getFieldVariable(lockFieldName) != null) {
+                                               retTypes.add(-2);
+                                               continue;
+                                        }
+                                }
+                                
 				// apply a poor-man's filter for missed cases
 				String expr = call.getText(), base;
 
@@ -847,14 +872,12 @@ public abstract class DeadlockGraphMaker {
 		cid = getThisType(sourceClass.getParent());
 		return cid;
 	}
-
-
-
-	private void parseMethodNode(DeadlockFunction method, DeadlockClass sourceClass) {
+        
+        private void parseMethodNode(DeadlockFunction method, DeadlockClass sourceClass) {
 		DeadlockGraphMethod node = GraphFunctions.get(method);
-
+                
 		for(ParserRuleContext call : method.getMethodCalls()) {
-			parseMethodCalls(node, call, method, sourceClass);
+                        parseMethodCalls(node, call, method, sourceClass);
 		}
 	}
 
@@ -950,6 +973,18 @@ public abstract class DeadlockGraphMaker {
 			createGraphFunction(f);
 			parseMethodNode(f, f.getSourceClass());
 		}
+	}
+        
+        public static String getSyncLockName() {
+		return "synchLock_";
+	}
+        
+        public static String getSyncLockName(String itemName, int methodId) {
+                itemName = itemName.replace('.', '_');
+                itemName = itemName.replace('-', '_');
+                itemName = itemName.replace('>', '_');
+                
+		return "synchLock_" + itemName + "_" + methodId;
 	}
 
 	public Set<Integer> generateEnumReferences() {

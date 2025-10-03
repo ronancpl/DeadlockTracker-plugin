@@ -31,6 +31,7 @@ public enum ReflectedTypes {
 	ATOMICLONGARRAY("AtomicLongArray", initReflectedMethods(new String[]{"set", "lazySet", "compareAndSet", "weakCompareAndSet"}, new String[]{"void", "void", "boolean", "boolean"}), "long"),
 	STRING("String", initReflectedMethods(new String[]{}, new String[]{}), "Object"),
 	LOCK("Lock", initReflectedMethods(new String[]{"lock", "unlock", "tryLock"}, new String[]{"void", "void", "void"}), "Object"),
+        LOCK_CSHARP("Lock", initReflectedMethods(new String[]{"_lock", "_unlock"}, new String[]{"void", "void"}), "Object"),
 	SCRIPT("Invocable", initReflectedMethods(new String[]{"invokeFunction"}, new String[]{"void"}), "Object");
 
 	private String name;

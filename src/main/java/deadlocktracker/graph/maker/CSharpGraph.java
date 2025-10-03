@@ -454,6 +454,8 @@ public class CSharpGraph extends DeadlockGraphMaker {
                                         ret.add(typeId);
                                 }
                         }
+                        
+                        return ret;
                 }
 
 		ret.add(-1);

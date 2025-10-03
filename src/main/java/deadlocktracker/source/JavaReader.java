@@ -11,6 +11,7 @@
  */
 package deadlocktracker.source;
 
+import deadlocktracker.DeadlockGraphMaker;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -72,7 +73,6 @@ public class JavaReader extends JavaParserBaseListener {
 	// ---- volatile fields ----
 
 	private static AtomicInteger runningId = new AtomicInteger(1);
-	private static AtomicInteger runningSyncLockId = new AtomicInteger(0);
 	private static AtomicInteger runningTypeId = new AtomicInteger(1);  // volatile id 0 reserved for sync locks
 	private static AtomicInteger runningMethodCallCount = new AtomicInteger(0);
 
@@ -507,8 +507,7 @@ public class JavaReader extends JavaParserBaseListener {
 			List<JavaParser.ModifierContext> mods = par.modifier();
 
 			if(mods != null && hasSynchronizedModifier(mods)) {
-				Integer syncLockId = runningSyncLockId.getAndIncrement();
-				String syncLockName = getSyncLockName(syncLockId);
+				String syncLockName = DeadlockGraphMaker.getSyncLockName();
 
 				currentClass.addFieldVariable(0, syncLockName);
 				processLock(syncLockTypeName, syncLockName, "");   // create a lock representation of the synchronized modifier
@@ -578,9 +577,17 @@ public class JavaReader extends JavaParserBaseListener {
 			}
 		}
 	}
-
-	private static String getSyncLockName(Integer syncLockId) {
-		return "synchLock" + syncLockId;
+        
+	private static String getSyncLockNameFromExpression(JavaParser.ParExpressionContext parCtx, int methodId) {
+                String fieldName = parCtx.getText();
+                String lockName = DeadlockGraphMaker.getSyncLockName(fieldName, methodId);
+                
+                Integer t = currentClass.getFieldVariable(lockName);
+                if (t == null) {
+                        currentClass.addFieldVariable(0, lockName);
+                }
+		
+                return lockName;
 	}
 
 	private static JavaParser.ExpressionContext generateSyncLockExpression(String syncLockName, boolean lock) {
@@ -595,14 +602,11 @@ public class JavaReader extends JavaParserBaseListener {
 	@Override
 	public void enterStatement(JavaParser.StatementContext ctx) {
 		if(ctx.SYNCHRONIZED() != null) {
-			Integer syncLockId = runningSyncLockId.getAndIncrement();
-			String syncLockName = getSyncLockName(syncLockId);
+			String syncLockName = getSyncLockNameFromExpression(ctx.parExpression(), methodStack.peek().getId());
 
 			currentClass.addFieldVariable(0, syncLockName);
 			processLock(syncLockTypeName, syncLockName, "");   // create a lock representation of the synchronized modifier
 			methodStack.peek().addMethodCall(generateSyncLockExpression(syncLockName, true));
-
-			syncLockStack.push(syncLockId);
 		} else {
 			Pair<String, String> lockData = captureLockNameAndReference(ctx.expression(0));
 
@@ -617,23 +621,14 @@ public class JavaReader extends JavaParserBaseListener {
 					}
 				}
 			}
-			/*
-            else {
-                Pair<String, Byte> lockStmt = captureLockStatement(ctx.expression(0));
-
-                if(lockStmt != null) {
-
-                }
-            }
-			 */
 		}
 	}
 
 	@Override
 	public void exitStatement(JavaParser.StatementContext ctx) {
 		if(ctx.SYNCHRONIZED() != null) {
-			Integer syncLockId = syncLockStack.pop();
-			methodStack.peek().addMethodCall(generateSyncLockExpression(getSyncLockName(syncLockId), false));
+			String syncLockName = getSyncLockNameFromExpression(ctx.parExpression(), methodStack.peek().getId());
+			methodStack.peek().addMethodCall(generateSyncLockExpression(syncLockName, false));
 		}
 	}
 
@@ -1452,15 +1447,15 @@ public class JavaReader extends JavaParserBaseListener {
 		referenceReadWriteLocks();
 
 		/*
-        for(Entry<Integer, Pair<String, String>> v : volatileDataTypes.entrySet()) {
-            System.out.println(v.getKey() + " : " + v.getValue());
-        }
+                for(Entry<Integer, Pair<String, String>> v : volatileDataTypes.entrySet()) {
+                        System.out.println(v.getKey() + " : " + v.getValue());
+                }
 
-        for(Map<String, DeadlockClass> m : PublicClasses.values()) {
-            for(DeadlockClass mdc : m.values()) {
-                System.out.println(mdc);
-            }
-        }
+                for(Map<String, DeadlockClass> m : PublicClasses.values()) {
+                        for(DeadlockClass mdc : m.values()) {
+                               System.out.println(mdc);
+                        }
+                }
 		 */
 
 		parseDataTypes();

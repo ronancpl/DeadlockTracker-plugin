@@ -11,6 +11,7 @@
  */
 package deadlocktracker.source;
 
+import deadlocktracker.DeadlockGraphMaker;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,7 +32,6 @@ import deadlocktracker.containers.DeadlockEnum;
 import deadlocktracker.containers.DeadlockFunction;
 import deadlocktracker.containers.DeadlockLock;
 import deadlocktracker.containers.DeadlockStorage;
-import static deadlocktracker.containers.DeadlockStorage.getPublicPackageName;
 import deadlocktracker.containers.Pair;
 import deadlocktracker.graph.DeadlockAbstractType;
 import deadlocktracker.strings.IgnoredTypes;
@@ -83,7 +83,6 @@ public class CSharpReader extends CSharpParserBaseListener {
 	private static Stack<Integer> methodCallCountStack = new Stack();
 	private static Stack<DeadlockFunction> methodStack = new Stack();
 	private static List<DeadlockClass> classStack = new ArrayList();
-	private static Stack<Integer> syncLockStack = new Stack();
 
 	private static Set<String> readLockWaitingSet = new HashSet();
 	private static Set<String> writeLockWaitingSet = new HashSet();
@@ -571,10 +570,27 @@ public class CSharpReader extends CSharpParserBaseListener {
         
         @Override
 	public void enterEmbedded_statement(CSharpParser.Embedded_statementContext ctx) {
-                if (ctx.simple_embedded_statement() != null && ctx.simple_embedded_statement() instanceof CSharpParser.ForeachStatementContext) {
-                        CSharpParser.ForeachStatementContext fctx = (CSharpParser.ForeachStatementContext) ctx.simple_embedded_statement();
-                        if (fctx.local_variable_type().type_() != null) {
-                                processVariableDeclarations(true, fctx.local_variable_type().type_().getText(), Collections.singletonList(fctx.identifier().IDENTIFIER().getText()));
+                if (ctx.simple_embedded_statement() != null) {
+                        if (ctx.simple_embedded_statement() instanceof CSharpParser.ForeachStatementContext) {
+                                CSharpParser.ForeachStatementContext fctx = (CSharpParser.ForeachStatementContext) ctx.simple_embedded_statement();
+                                if (fctx.local_variable_type().type_() != null) {
+                                        processVariableDeclarations(true, fctx.local_variable_type().type_().getText(), Collections.singletonList(fctx.identifier().IDENTIFIER().getText()));
+                                }
+                        } else if (ctx.simple_embedded_statement() instanceof CSharpParser.LockStatementContext) {
+                                String syncLockName = DeadlockGraphMaker.getSyncLockName(((CSharpParser.LockStatementContext) ctx.simple_embedded_statement()).expression().getText(), methodStack.peek().getId());
+
+                                processLock(syncLockTypeName, syncLockName, syncLockName);   // create a lock representation of the synchronized modifier
+                                methodStack.peek().addMethodCall(generateSyncLockExpression(syncLockName, true));
+                        }
+                }
+	}
+        
+        @Override
+	public void exitEmbedded_statement(CSharpParser.Embedded_statementContext ctx) {
+                if (ctx.simple_embedded_statement() != null) {
+                        if (ctx.simple_embedded_statement() instanceof CSharpParser.LockStatementContext) {
+                                String syncLockName = DeadlockGraphMaker.getSyncLockName(((CSharpParser.LockStatementContext) ctx.simple_embedded_statement()).expression().getText(), methodStack.peek().getId());
+                                methodStack.peek().addMethodCall(generateSyncLockExpression(syncLockName, false));
                         }
                 }
 	}
@@ -649,17 +665,13 @@ public class CSharpReader extends CSharpParserBaseListener {
 		}
 	}
 
-	private static String getSyncLockName(Integer syncLockId) {
-		return "synchLock" + syncLockId;
-	}
-
-	private static CSharpParser.ExpressionContext generateSyncLockExpression(String syncLockName, boolean lock) {
-		String lockStrExpr = syncLockName + "." + (lock ? "lock" : "unlock") + "();";
+	private static CSharpParser.Unary_expressionContext generateSyncLockExpression(String syncLockName, boolean lock) {
+		String lockStrExpr = syncLockName + "." + (lock ? "_lock" : "_unlock") + "()";
 		CSharpLexer lexer = new CSharpLexer(CharStreams.fromString(lockStrExpr));
 		CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
 		CSharpParser parser = new CSharpParser(commonTokenStream);
 
-		return parser.expression();
+		return parser.unary_expression();
 	}
 
 	private static void addMethodFromExpression(CSharpParser.Unary_expressionContext ctx) {
@@ -677,13 +689,10 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 	@Override
 	public void exitUnary_expression(CSharpParser.Unary_expressionContext ctx) {
-
 		int count = runningMethodCallCount.decrementAndGet();
-
 		if(count == 0 && !methodStack.isEmpty() && ctx.primary_expression() != null && ctx.primary_expression().method_invocation().size() > 0) {
 			addMethodFromExpression(ctx);
 		}
-
 	}
 
 	// lambda methods
@@ -880,6 +889,8 @@ public class CSharpReader extends CSharpParserBaseListener {
 		} else {
 			Locks.put(lockName, instanceNewLock(lockName));
 		}
+                
+                currentClass.addFieldVariable(0, name);
 	}
 
 	private static DeadlockLock instanceNewLock(String lockName) {
@@ -929,7 +940,7 @@ public class CSharpReader extends CSharpParserBaseListener {
                 for(String s : mdc.getImportNames()) {
                         List<Pair<String, String>> p = new LinkedList<>();
                         
-                        String packName = getPublicPackageName(s + ".");
+                        String packName = DeadlockStorage.getPublicPackageName(s + ".");
                         if (packName != null) {
                                 while (packName != null) {
                                         p.add(new Pair<>(packName, "*"));
@@ -939,7 +950,7 @@ public class CSharpReader extends CSharpParserBaseListener {
                                         
                                         s = s.substring(0, idx);
                                         
-                                        packName = getPublicPackageName(s + ".");
+                                        packName = DeadlockStorage.getPublicPackageName(s + ".");
                                 }
                         } else {
                                 Pair<String, String> ps = DeadlockStorage.locateClassPath(s);

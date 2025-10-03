@@ -44,8 +44,8 @@ public class DeadlockFunction {
 	private Set<DeadlockLock> locks;
 
 	private Map<Long, List<Integer>> volatileLocalVars = new HashMap<>();
-	private Map<Long, Set<Integer>> localVars = new HashMap();
-	private Map<Long, String> localVarNames = new HashMap();
+	private Map<Long, Set<Integer>> localVars = new HashMap<>();
+	private Map<Long, String> localVarNames = new HashMap<>();
 	private Map<Long, Integer> paramVars;
 
 	private List<ParserRuleContext> methodCalls = new LinkedList<>();   // starts off as a string representing the call, after the source readings it will be parsed
@@ -122,6 +122,10 @@ public class DeadlockFunction {
 
 	public String getLocalVariableName(Long hash) {
 		return localVarNames.get(hash);
+	}
+        
+        public Set<String> getLocalVariableNames() {
+		return new HashSet<>(localVarNames.values());
 	}
 
 	public Map<Long, Set<Integer>> getLocalVariables() {
