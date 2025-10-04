@@ -579,7 +579,7 @@ public class JavaReader extends JavaParserBaseListener {
 	}
         
 	private static String getSyncLockNameFromExpression(JavaParser.ParExpressionContext parCtx, int methodId) {
-                String fieldName = parCtx.getText();
+                String fieldName = parCtx.expression().getText();
                 String lockName = DeadlockGraphMaker.getSyncLockName(fieldName, methodId);
                 
                 Integer t = currentClass.getFieldVariable(lockName);

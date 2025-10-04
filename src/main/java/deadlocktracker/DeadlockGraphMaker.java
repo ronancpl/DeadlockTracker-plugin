@@ -36,12 +36,8 @@ import deadlocktracker.graph.DeadlockGraphNodeScript;
 import deadlocktracker.graph.DeadlockGraphMethod;
 import deadlocktracker.source.CSharpReader;
 import deadlocktracker.strings.LinkedTypes;
-import language.csharp.CSharpLexer;
-import language.csharp.CSharpParser;
 
 import language.java.JavaParser;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
@@ -83,6 +79,8 @@ public abstract class DeadlockGraphMaker {
 
 	private Map<DeadlockFunction, Integer> GraphFunctionIds = new HashMap<>();
 	private Map<DeadlockFunction, DeadlockGraphMethod> GraphFunctions = new HashMap<>();
+        
+        protected DeadlockClass refClass = null;
 
 	private Integer runningFid = 0;
 	private Integer lockId;
@@ -93,6 +91,8 @@ public abstract class DeadlockGraphMaker {
 	public abstract Set<Integer> getMethodReturnType(DeadlockGraphMethod node, Integer classType, ParserRuleContext methodCall, DeadlockFunction sourceMethod, DeadlockClass sourceClass);
 	public abstract Set<Integer> parseMethodCalls(DeadlockGraphMethod node, ParserRuleContext callCtx, DeadlockFunction sourceMethod, DeadlockClass sourceClass, boolean filter);	
 	public abstract String parseMethodName(ParserRuleContext callCtx);
+        public abstract ParserRuleContext generateExpression(String expressionText);
+        public abstract boolean isUnlockMethodCall(String expressionText);
         
         protected List<Integer> getArgumentTypes(DeadlockGraphMethod node, ParserRuleContext expList, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
 		List<Integer> ret = new LinkedList<>();
@@ -333,7 +333,7 @@ public abstract class DeadlockGraphMaker {
 			//System.out.println("FAILED TO FIND '" + name + "' ON " + DeadlockStorage.getCanonClassName(sourceClass) + ", call was " + curCall);
 			return -1;
 		}
-
+                
 		if(t.equals(ElementalTypes[5]) || t == 0) {
 			lockId = getLockId(name, sourceClass);
 		}
@@ -784,17 +784,10 @@ public abstract class DeadlockGraphMaker {
                 }
         }
 
-        private static CSharpParser.Unary_expressionContext generateExpression(String expressionText) {
-		CSharpLexer lexer = new CSharpLexer(CharStreams.fromString(expressionText));
-		CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
-		CSharpParser parser = new CSharpParser(commonTokenStream);
-
-		return parser.unary_expression();
-	}
-        
         private Pair<Integer, String> fetchLockField(String expressionText, boolean isLock, DeadlockGraphMethod node, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
-                CSharpParser.Unary_expressionContext ctx = generateExpression(expressionText);
-                Set<Integer> metRetTypes = parseMethodCalls(node, ctx, sourceMethod, sourceClass, true);
+                ParserRuleContext ctx = generateExpression(expressionText);
+                parseMethodCalls(node, ctx, sourceMethod, sourceClass, true);
+                int typeId = ClassDataTypeIds.get(refClass);
 
                 int idx = Integer.MAX_VALUE;
 
@@ -812,17 +805,14 @@ public abstract class DeadlockGraphMaker {
                         expressionText = ctx.getText().substring(0, idx);
                 }
 
-                for (Integer typeId : metRetTypes) {
-                        if (typeId > 0) return new Pair<>(isLock ? typeId : -typeId, expressionText);
-                }
                 
-                return null;
+                return new Pair<>(isLock ? typeId : -typeId, expressionText);
         }
         
 	protected Set<Integer> parseMethodCalls(DeadlockGraphMethod node, ParserRuleContext call, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
                 String callText = call.getText();
             
-                Set<Integer> metRetTypes = parseMethodCalls(node, call, sourceMethod, sourceClass, true);
+                Set<Integer> metRetTypes = parseMethodCalls(node, call, sourceMethod, sourceClass, false);
 
 		Set<Integer> retTypes = new HashSet<>();
 		for (Integer ret : metRetTypes) {
@@ -868,11 +858,11 @@ public abstract class DeadlockGraphMaker {
                                         System.out.println("[Warning] COULD NOT DETERMINE " + call.getText() + " on src " + DeadlockStorage.getCanonClassName(sourceClass) + ", ret " + ret);
                                 } else if (ret == -3) {
                                         String prefixLockName = DeadlockGraphMaker.getSyncLockName();
-		
+                                        
                                         if (callText.startsWith(prefixLockName)) {
                                                 String fieldExpr = getLockFieldName(callText.substring(prefixLockName.length()));
 
-                                                Pair<Integer, String> lockField = fetchLockField(fieldExpr, !callText.endsWith("unlock()"), node, sourceMethod, sourceClass);
+                                                Pair<Integer, String> lockField = fetchLockField(fieldExpr, !isUnlockMethodCall(callText), node, sourceMethod, sourceClass);
                                                 if (lockField != null) {
                                                         DeadlockClass c = getClassFromType(Math.abs(lockField.getLeft()));
                                                         if(c != null) {

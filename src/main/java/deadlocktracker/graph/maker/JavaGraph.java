@@ -154,7 +154,11 @@ public class JavaGraph extends DeadlockGraphMaker {
         
         @Override
 	public Set<Integer> parseMethodCalls(DeadlockGraphMethod node, ParserRuleContext callCtx, DeadlockFunction sourceMethod, DeadlockClass sourceClass, boolean filter) {
-		JavaParser.ExpressionContext call = (JavaParser.ExpressionContext) callCtx;
+		if (filter) {
+                        refClass = sourceClass;
+                }
+                
+                JavaParser.ExpressionContext call = (JavaParser.ExpressionContext) callCtx;
 		JavaParser.ExpressionContext curCtx = call;
 
 		Set<Integer> ret = new HashSet<>();
@@ -379,5 +383,19 @@ public class JavaGraph extends DeadlockGraphMaker {
 
 		return methodName;
 	}
+        
+        @Override
+        public ParserRuleContext generateExpression(String expressionText) {
+		JavaLexer lexer = new JavaLexer(CharStreams.fromString(expressionText));
+		CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+		JavaParser parser = new JavaParser(commonTokenStream);
+
+		return parser.expression();
+	}
+        
+        @Override
+        public boolean isUnlockMethodCall(String expressionText) {
+                return expressionText.endsWith("unlock();");
+        }
 
 }

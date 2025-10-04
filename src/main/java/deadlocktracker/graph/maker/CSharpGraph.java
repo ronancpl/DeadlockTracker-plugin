@@ -227,8 +227,11 @@ public class CSharpGraph extends DeadlockGraphMaker {
         
 	@Override
 	public Set<Integer> parseMethodCalls(DeadlockGraphMethod node, ParserRuleContext exprCtx, DeadlockFunction sourceMethod, DeadlockClass sourceClass, boolean filter) {
-		Set<Integer> ret = new HashSet<>();
+		if (filter) {
+                        refClass = sourceClass;
+                }
                 
+                Set<Integer> ret = new HashSet<>();
                 if (exprCtx instanceof CSharpParser.Unary_expressionContext) {
 			CSharpParser.Unary_expressionContext expr = (CSharpParser.Unary_expressionContext) exprCtx;
 			CSharpParser.Primary_expressionContext curCtx = expr.primary_expression();
@@ -255,6 +258,8 @@ public class CSharpGraph extends DeadlockGraphMaker {
                                                                 for (Integer expType : metRetTypes) {
                                                                         if(expType == null) System.out.println("null on " + expr.getText() + " src is " + DeadlockStorage.getCanonClassName(sourceClass));
                                                                         if(expType != -1) {
+                                                                                if (ClassDataTypes.get(expType) != null) refClass = ClassDataTypes.get(expType);
+                                                                                
                                                                                 this.expType.push(expType);
                                                                                 c++;
                                                                                 
@@ -277,7 +282,7 @@ public class CSharpGraph extends DeadlockGraphMaker {
                                         
 					return ret;
 				} else {
-                                        ret.addAll(parseMethodCalls(node, ((CSharpParser.Unary_expressionContext) exprCtx).unary_expression(), sourceMethod, sourceClass, filter));
+                                        ret.addAll(parseMethodCalls(node, ((CSharpParser.Unary_expressionContext) exprCtx).unary_expression(), sourceMethod, sourceClass, false));
                                         return ret;
                                 }
 			}
@@ -483,5 +488,19 @@ public class CSharpGraph extends DeadlockGraphMaker {
 
 		return methodName;
 	}
+        
+        @Override
+        public ParserRuleContext generateExpression(String expressionText) {
+		CSharpLexer lexer = new CSharpLexer(CharStreams.fromString(expressionText));
+		CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
+		CSharpParser parser = new CSharpParser(commonTokenStream);
+
+		return parser.unary_expression();
+	}
+        
+        @Override
+        public boolean isUnlockMethodCall(String expressionText) {
+                return expressionText.endsWith("unlock()");
+        }
 
 }
