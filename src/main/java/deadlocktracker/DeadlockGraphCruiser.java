@@ -246,7 +246,7 @@ public class DeadlockGraphCruiser {
 		prepareFunctionMilestones();
 
 		Map<DeadlockFunction, DeadlockGraphMethod> functionGraph = graph.getFunctionGraph();
-                Set<DeadlockFunction> runMethods = storage.getRunnableMethods();
+        Set<DeadlockFunction> runMethods = storage.getRunnableMethods();
                 
 		for (Entry<DeadlockFunction, DeadlockGraphMethod> e : functionGraph.entrySet()) {
 			DeadlockFunction f = e.getKey();

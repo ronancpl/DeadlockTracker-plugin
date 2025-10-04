@@ -133,7 +133,7 @@ public class DeadlockTracker extends AbstractMojo {
 		System.out.println("Project graph generated!\n");
 
 		Map<Integer, String> r = getGraphLockNames(g);
-		Set<DeadlockEntry> mds = new DeadlockGraphCruiser().runSourceGraph(mdg, r);
+		Set<DeadlockEntry> mds = new DeadlockGraphCruiser().runSourceGraph(mdg, md, r);
 		DeadlockGraphResult.reportDeadlocks(mds, r);
 
 		//DeadlockGraphMaker.dumpGraph();
