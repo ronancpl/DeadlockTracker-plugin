@@ -239,7 +239,12 @@ public class CSharpGraph extends DeadlockGraphMaker {
 				return ret;
 			} else {
 				if (curCtx != null) {
-                                        this.expType.push(ClassDataTypeIds.get(sourceClass));
+                                        if (!sourceClass.getName().contentEquals("_DefaultClass")) {
+                                                this.expType.push(ClassDataTypeIds.get(sourceClass));
+                                        } else {
+                                                this.expType.push(-2);
+                                        }
+                                        
                                         int c = 0;
                                         for (int i = 0; i < curCtx.getChildCount(); i++) {
                                                 if (curCtx.getChild(i) instanceof ParserRuleContext) {
@@ -251,10 +256,9 @@ public class CSharpGraph extends DeadlockGraphMaker {
                                                                         if(expType == null) System.out.println("null on " + expr.getText() + " src is " + DeadlockStorage.getCanonClassName(sourceClass));
                                                                         if(expType != -1) {
                                                                                 this.expType.push(expType);
+                                                                                c++;
                                                                                 
-                                                                                if(expType != -2) {     // expType -2 means the former expression type has been excluded from the search
-                                                                                        c++;
-                                                                                } else {
+                                                                                if(expType == -2) {     // expType -2 means the former expression type has been excluded from the search
                                                                                         break;
                                                                                 }
                                                                         } else {

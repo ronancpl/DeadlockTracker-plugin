@@ -242,14 +242,16 @@ public class DeadlockGraphCruiser {
 		}
 	}
 
-	private void findFunctionLocks(DeadlockGraph graph) {
+	private void findFunctionLocks(DeadlockGraph graph, DeadlockStorage storage) {
 		prepareFunctionMilestones();
 
 		Map<DeadlockFunction, DeadlockGraphMethod> functionGraph = graph.getFunctionGraph();
+                Set<DeadlockFunction> runMethods = storage.getRunnableMethods();
+                
 		for (Entry<DeadlockFunction, DeadlockGraphMethod> e : functionGraph.entrySet()) {
 			DeadlockFunction f = e.getKey();
-			if (isStartingFunction(f)) {
-				//System.out.println("Reading " + DeadlockStorage.getCanonClassName(f.getSourceClass()) + " >> " + f.getName());
+                        if (isStartingFunction(f) || runMethods.contains(f)) {
+				System.out.println("Reading " + DeadlockStorage.getCanonClassName(f.getSourceClass()) + " >> " + f.getName());
 				FunctionPathNode trace = new FunctionPathNode();
 				runSourceGraphFunction(f, functionGraph, trace);
 			}
@@ -422,10 +424,10 @@ public class DeadlockGraphCruiser {
 		System.out.println();
 	}
 
-	public Set<DeadlockEntry> runSourceGraph(DeadlockGraph graph, Map<Integer, String> LockNames) {
+	public Set<DeadlockEntry> runSourceGraph(DeadlockGraph graph, DeadlockStorage storage, Map<Integer, String> LockNames) {
 		createFunctionAcquiredLocks(graph);
 		makeRemissiveIndexFunctions(graph);
-		findFunctionLocks(graph);
+		findFunctionLocks(graph, storage);
 
 		detectDeadlocks(LockNames);
 		return deadlocks;

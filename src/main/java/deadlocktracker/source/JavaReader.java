@@ -66,7 +66,7 @@ public class JavaReader extends JavaParserBaseListener {
 	private static Map<Integer, Pair<Integer, Map<String, Integer>>> ReflectedClasses = storage.getReflectedClasses();
 
 	private static Map<DeadlockFunction, Boolean> RunnableFunctions = new HashMap<>();
-	private static List<DeadlockFunction> RunnableMethods = storage.getRunnableMethods();
+	private static Set<DeadlockFunction> RunnableMethods = storage.getRunnableMethods();
 
 	//private static Map<Integer, String> CompoundDataNames = new HashMap();   // test purposes only
 

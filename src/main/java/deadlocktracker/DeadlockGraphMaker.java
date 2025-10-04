@@ -67,7 +67,7 @@ public abstract class DeadlockGraphMaker {
 	protected Map<DeadlockClass, List<DeadlockClass>> InheritanceTree;
 	protected Pair<Integer, Integer> IgnoredDataRange;
 
-	protected List<DeadlockFunction> RunnableMethods;
+	protected Set<DeadlockFunction> RunnableMethods;
 
 	protected Map<Integer, List<Integer>> CompoundDataTypes = new HashMap<>();
 	protected Map<Integer, DeadlockClass> ClassDataTypes = new HashMap<>();
@@ -816,10 +816,6 @@ public abstract class DeadlockGraphMaker {
         }
         
 	protected Set<Integer> parseMethodCalls(DeadlockGraphMethod node, ParserRuleContext call, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
-                if (call.getText().contains("board.ParentControl_")) {
-                        int i = 0;
-                }
-                
                 String callText = call.getText();
             
                 Set<Integer> metRetTypes = parseMethodCalls(node, call, sourceMethod, sourceClass, true);

@@ -41,7 +41,7 @@ public class DeadlockStorage {
 	private static Map<DeadlockClass, List<DeadlockClass>> InheritanceTree = new HashMap<>();
 	private static Pair<Integer, Integer> ignoredDataRange = null;
 
-	private static List<DeadlockFunction> RunnableMethods = new ArrayList<>();
+	private static Set<DeadlockFunction> RunnableMethods = new HashSet<>();
 
 	public static Map<String, Map<String, DeadlockClass>> getPublicClasses() {
 		return PublicClasses;
@@ -87,7 +87,7 @@ public class DeadlockStorage {
 		return ReflectedClasses;
 	}
 
-	public List<DeadlockFunction> getRunnableMethods() {
+	public Set<DeadlockFunction> getRunnableMethods() {
 		return RunnableMethods;
 	}
 

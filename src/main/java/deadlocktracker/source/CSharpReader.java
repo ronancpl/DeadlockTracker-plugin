@@ -69,7 +69,7 @@ public class CSharpReader extends CSharpParserBaseListener {
 	private static Map<Integer, Pair<Integer, Map<String, Integer>>> ReflectedClasses = storage.getReflectedClasses();
 
 	private static Map<DeadlockFunction, Boolean> RunnableFunctions = new HashMap<>();
-	private static List<DeadlockFunction> RunnableMethods = storage.getRunnableMethods();
+	private static Set<DeadlockFunction> RunnableMethods = storage.getRunnableMethods();
 
 	//private static Map<Integer, String> CompoundDataNames = new HashMap();   // test purposes only
 
@@ -102,6 +102,8 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 	private static Map<Integer, Pair<DeadlockClass, Integer>> volatileMaskedTypes = new HashMap<>();
 	private static Map<Integer, Pair<String, String>> volatileDataTypes = new HashMap<>();  // cannot recover the import classes at the first parsing, so the type definition comes at the second rundown
+        
+        private static DeadlockClass defaultClass = new DeadlockClass(DeadlockClassType.CLASS, "_DefaultClass", "_package.", "", Collections.emptyList(), true, null);
 
 	public void setSourceDirPrefixPath(String sourceDirPath) {
 		sourceDirPath = sourceDirPath.trim().toLowerCase();
@@ -467,14 +469,12 @@ public class CSharpReader extends CSharpParserBaseListener {
                 if (mdc != null) mdc.addClassMethod(method);
 	}
 
-	private void exitMethodDeclaration() {
+	private void exitMethodDeclaration(boolean lambdaMethod) {
 		DeadlockFunction method = methodStack.pop();
-
-		String methodName = method.getName();
-		if(methodName.contentEquals("run") && method.getParameters().isEmpty()) {
+                if(lambdaMethod) {
 			// book-keeping possible Runnable functions to be dealt with later on the parsing
 
-			RunnableFunctions.put(method, !methodStack.isEmpty());
+			RunnableFunctions.put(method, true);
 		}
 
 		runningMethodCallCount.set(methodCallCountStack.pop());
@@ -509,7 +509,24 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 	@Override
 	public void exitMethod_declaration(CSharpParser.Method_declarationContext ctx) {
-		exitMethodDeclaration();
+		exitMethodDeclaration(false);
+	}
+        
+        @Override
+	public void enterLambda_expression(CSharpParser.Lambda_expressionContext ctx) {
+		DeadlockFunction method = new DeadlockFunction("_unidentified_"  + RunnableMethods.size(), defaultClass, methodStack.isEmpty() ? null : methodStack.peek(), currentAbstract);
+		Pair<Integer, Pair<List<Integer>, Map<Long, Integer>>> retParamTypes = getLambdaMethodMetadata(ctx, "void", method);
+
+		method.setMethodMetadata(retParamTypes.left, retParamTypes.right.left, retParamTypes.right.right);
+		methodStack.add(method);
+
+		methodCallCountStack.add(runningMethodCallCount.get());
+		runningMethodCallCount.set(0);
+	}
+        
+        @Override
+	public void exitLambda_expression(CSharpParser.Lambda_expressionContext ctx) {
+		exitMethodDeclaration(true);
 	}
 
 	private void enterLocalFunctionDeclaration(List<String> list, CSharpParser.Local_function_declarationContext ctx) {
@@ -539,7 +556,7 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 	@Override
 	public void exitLocal_function_declaration(CSharpParser.Local_function_declarationContext ctx) {
-		exitMethodDeclaration();
+		exitMethodDeclaration(false);
 	}
 
 	@Override
@@ -595,7 +612,7 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 	@Override
 	public void enterEvent_declaration(CSharpParser.Event_declarationContext ctx) {
-		DeadlockFunction method = new DeadlockFunction("event_"  + RunnableMethods.size(), currentClass, null, false);
+		DeadlockFunction method = new DeadlockFunction("_event_"  + RunnableMethods.size(), currentClass, null, false);
 		Pair<List<Integer>, Map<Long, Integer>> pTypes = getMethodParameterTypes(null, method);
 
 		method.setMethodMetadata(-1, pTypes.left, pTypes.right);
@@ -692,9 +709,15 @@ public class CSharpReader extends CSharpParserBaseListener {
 			addMethodFromExpression(ctx);
 		}
 	}
+        
+	private static Pair<Integer, Pair<List<Integer>, Map<Long, Integer>>> getLambdaMethodMetadata(CSharpParser.Lambda_expressionContext ctx, String retTypeName, DeadlockFunction method) {
+		Integer type = getTypeId(retTypeName, currentCompleteFileClassName);
+		Pair<List<Integer>, Map<Long, Integer>> params = getLambdaMethodParameterTypes(ctx.anonymous_function_signature(), method);
 
-	// lambda methods
-	private static Pair<Integer, Pair<List<Integer>, Map<Long, Integer>>> getMethodMetadata(CSharpParser.Method_declarationContext ctx, String retTypeName, DeadlockFunction method) {
+		return new Pair<>(type, params);
+	}
+        
+        private static Pair<Integer, Pair<List<Integer>, Map<Long, Integer>>> getMethodMetadata(CSharpParser.Method_declarationContext ctx, String retTypeName, DeadlockFunction method) {
 		Integer type = getTypeId(retTypeName, currentCompleteFileClassName);
 		Pair<List<Integer>, Map<Long, Integer>> params = getMethodParameterTypes(ctx.formal_parameter_list(), method);
 
@@ -741,6 +764,27 @@ public class CSharpReader extends CSharpParserBaseListener {
                                 }
                         }
 		}
+
+		return new Pair<>(pTypes, params);
+	}
+        
+        private static Pair<List<Integer>, Map<Long, Integer>> getLambdaMethodParameterTypes(CSharpParser.Anonymous_function_signatureContext ctx, DeadlockFunction method) {
+		Map<Long, Integer> params = new HashMap<>();
+		List<Integer> pTypes = new LinkedList<>();
+
+                CSharpParser.Implicit_anonymous_function_parameter_listContext aCtx = ctx.implicit_anonymous_function_parameter_list();
+                if (aCtx != null) {
+                        for (CSharpParser.IdentifierContext idCtx : aCtx.identifier()) {
+                                addMethodParameter("Object", "Object", idCtx.IDENTIFIER().getText(), method, params, pTypes);
+                        }
+                } else {
+                        CSharpParser.Explicit_anonymous_function_parameter_listContext bCtx = ctx.explicit_anonymous_function_parameter_list();
+                        if (bCtx != null) {
+                                for (CSharpParser.Explicit_anonymous_function_parameterContext apCtx : bCtx.explicit_anonymous_function_parameter()) {
+                                        addMethodParameter(apCtx.type_().base_type().getText(), apCtx.type_().getText(), apCtx.identifier().IDENTIFIER().getText(), method, params, pTypes);
+                                }
+                        }
+                }
 
 		return new Pair<>(pTypes, params);
 	}
@@ -1423,7 +1467,7 @@ public class CSharpReader extends CSharpParserBaseListener {
 			updateFunctionReferences(mdf);
 
 			DeadlockClass mdc = mdf.getSourceClass();
-			if(runMdf.getValue() || mdc.getSuperNameList().contains("Runnable")) {
+			if(runMdf.getValue()) {
 				RunnableMethods.add(mdf);
 			}
 
