@@ -771,13 +771,17 @@ public abstract class DeadlockGraphMaker {
         
         private String getLockFieldName(String resourceName) {
                 String[] sp = resourceName.split("_");
-                String lockFieldName = "";
-                for (int i = 0; i < sp.length - 2; i++) {
-                        lockFieldName += sp[i] + "_";
+                if (sp.length > 1) {
+                        String lockFieldName = "";
+                        for (int i = 0; i < sp.length - 2; i++) {
+                                lockFieldName += sp[i] + "_";
+                        }
+                        lockFieldName = lockFieldName.substring(0, lockFieldName.length() - 1);
+
+                        return lockFieldName;
+                } else {
+                        return resourceName;
                 }
-                lockFieldName = lockFieldName.substring(0, lockFieldName.length() - 1);
-                
-                return lockFieldName;
         }
 
         private static CSharpParser.Unary_expressionContext generateExpression(String expressionText) {
@@ -891,7 +895,6 @@ public abstract class DeadlockGraphMaker {
                                         }
                                 }
                         }
-                        
 		}
 
 		metRetTypes.remove(-1);
