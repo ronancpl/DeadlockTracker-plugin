@@ -246,11 +246,11 @@ public class DeadlockGraphCruiser {
 		prepareFunctionMilestones();
 
 		Map<DeadlockFunction, DeadlockGraphMethod> functionGraph = graph.getFunctionGraph();
-                Set<DeadlockFunction> runMethods = storage.getRunnableMethods();
-                
+		Set<DeadlockFunction> runMethods = storage.getRunnableMethods();
+
 		for (Entry<DeadlockFunction, DeadlockGraphMethod> e : functionGraph.entrySet()) {
 			DeadlockFunction f = e.getKey();
-                        if (isStartingFunction(f) || runMethods.contains(f)) {
+			if (isStartingFunction(f) || runMethods.contains(f)) {
 				System.out.println("Reading " + DeadlockStorage.getCanonClassName(f.getSourceClass()) + " >> " + f.getName());
 				FunctionPathNode trace = new FunctionPathNode();
 				runSourceGraphFunction(f, functionGraph, trace);

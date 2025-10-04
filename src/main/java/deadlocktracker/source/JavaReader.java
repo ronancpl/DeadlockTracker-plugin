@@ -577,17 +577,17 @@ public class JavaReader extends JavaParserBaseListener {
 			}
 		}
 	}
-        
+
 	private static String getSyncLockNameFromExpression(JavaParser.ParExpressionContext parCtx, int methodId) {
-                String fieldName = parCtx.expression().getText();
-                String lockName = DeadlockGraphMaker.getSyncLockName(fieldName, methodId);
-                
-                Integer t = currentClass.getFieldVariable(lockName);
-                if (t == null) {
-                        currentClass.addFieldVariable(0, lockName);
-                }
-		
-                return lockName;
+		String fieldName = parCtx.expression().getText();
+		String lockName = DeadlockGraphMaker.getSyncLockName(fieldName, methodId);
+
+		Integer t = currentClass.getFieldVariable(lockName);
+		if (t == null) {
+			currentClass.addFieldVariable(0, lockName);
+		}
+
+		return lockName;
 	}
 
 	private static JavaParser.ExpressionContext generateSyncLockExpression(String syncLockName, boolean lock) {
@@ -1092,7 +1092,7 @@ public class JavaReader extends JavaParserBaseListener {
 	}
 
 	private static Integer fetchDataType(String type, DeadlockClass pc) {
-                List<Integer> compoundType = new LinkedList<>();
+		List<Integer> compoundType = new LinkedList<>();
 		String t = type;
 
 		Integer ret = -2;
