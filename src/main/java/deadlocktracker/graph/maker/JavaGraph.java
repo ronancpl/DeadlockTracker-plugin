@@ -107,11 +107,11 @@ public class JavaGraph extends DeadlockGraphMaker {
 		//System.out.println("CALL METHODRETURNTYPE for " + classType + " methodcall " + methodCall.getText());
 		List<Integer> argTypes = getArgumentTypes(node, methodCall.expressionList(), sourceMethod, sourceClass);
 		String methodName = methodCall.IDENTIFIER().getText();
-
-		if(!ReflectedClasses.containsKey(classType)) {
+                
+                if(!ReflectedClasses.containsKey(classType)) {
 			DeadlockAbstractType absType = AbstractDataTypes.get(classType);
 			if(absType != null) {
-				Integer ret = evaluateAbstractFunction(node, methodName, argTypes, classType, absType);
+                                Integer ret = evaluateAbstractFunction(node, methodName, argTypes, classType, absType);
 				retTypes.add(ret);
 
 				//if(ret == -1 && absType != DeadlockAbstractType.LOCK) System.out.println("SOMETHING OUT OF CALL FOR " + methodCall.IDENTIFIER().getText() + " ON " + absType /*+ dataNames.get(expType)*/);
@@ -151,14 +151,14 @@ public class JavaGraph extends DeadlockGraphMaker {
 
 		return retTypes;
 	}
-
-	@Override
+        
+        @Override
 	public Set<Integer> parseMethodCalls(DeadlockGraphMethod node, ParserRuleContext callCtx, DeadlockFunction sourceMethod, DeadlockClass sourceClass, boolean filter) {
 		if (filter) {
-			refClass = sourceClass;
-		}
-
-		JavaParser.ExpressionContext call = (JavaParser.ExpressionContext) callCtx;
+                        refClass = sourceClass;
+                }
+                
+                JavaParser.ExpressionContext call = (JavaParser.ExpressionContext) callCtx;
 		JavaParser.ExpressionContext curCtx = call;
 
 		Set<Integer> ret = new HashSet<>();
@@ -168,8 +168,7 @@ public class JavaGraph extends DeadlockGraphMaker {
 
 			if(bopText.contentEquals(".")) {
 				JavaParser.ExpressionContext expCtx = curCtx.expression(0);
-
-				Set<Integer> metRetTypes = parseMethodCalls(node, expCtx, sourceMethod, sourceClass);
+                                Set<Integer> metRetTypes = parseMethodCalls(node, expCtx, sourceMethod, sourceClass);
 				if(metRetTypes.size() > 0) {
 					for (Integer expType : metRetTypes) {
 						if(expType == null) System.out.println("null on " + expCtx.getText() + " src is " + DeadlockStorage.getCanonClassName(sourceClass));
@@ -190,11 +189,13 @@ public class JavaGraph extends DeadlockGraphMaker {
 
 										continue;
 									} else if(curCtx.IDENTIFIER() != null) {
-										Integer idType = getTypeFromIdentifier(expType, curCtx.IDENTIFIER().getText(), sourceMethod);
-										if (idType == -2) {
-											System.out.println("[Warning] No datatype found for " + curCtx.IDENTIFIER() + " on expression " + curCtx.getText() + " srcclass " + DeadlockStorage.getCanonClassName(sourceClass) + " detected exptype " + expType);
-										}
-										ret.add(idType);
+                                                                                Integer idType = getTypeFromIdentifier(expType, curCtx.IDENTIFIER().getText(), sourceMethod);
+                                                                                if (idType == -2) {
+                                                                                        //String typeName = EveryDataTypes.get(expType);
+
+                                                                                        System.out.println("[Warning] No datatype found for " + curCtx.IDENTIFIER() + " on expression " + curCtx.getText() + " srcclass " + DeadlockStorage.getCanonClassName(sourceClass) + " detected exptype " + expType);
+                                                                                }
+                                                                                ret.add(idType);
 										continue;
 									} else if(curCtx.THIS() != null) {
 										ret.add(expType);
@@ -290,7 +291,7 @@ public class JavaGraph extends DeadlockGraphMaker {
 			JavaParser.PrimaryContext priCtx = curCtx.primary();
 
 			if(priCtx.IDENTIFIER() != null) {
-				Integer r = getPrimaryType(priCtx.IDENTIFIER().getText(), sourceMethod, sourceClass);
+                                Integer r = getPrimaryType(priCtx.IDENTIFIER().getText(), sourceMethod, sourceClass);
 				ret.add(r);
 				return ret;
 			} else if(priCtx.expression() != null) {
@@ -355,13 +356,13 @@ public class JavaGraph extends DeadlockGraphMaker {
 
 				String idName = nameCtx.IDENTIFIER(0).getText();
 				ret.add(getTypeId(idName, sourceClass));
-				return ret;
+                                return ret;
 			} else {
 				ret.add(getPrimitiveType(nameCtx.primitiveType()));
 				return ret;
 			}
 		} else if(curCtx.methodCall() != null) {
-			ret.addAll(getMethodReturnType(node, ClassDataTypeIds.get(sourceClass), curCtx.methodCall(), sourceMethod, sourceClass));
+                        ret.addAll(getMethodReturnType(node, ClassDataTypeIds.get(sourceClass), curCtx.methodCall(), sourceMethod, sourceClass));
 			return ret;
 		} else if(curCtx.expression().size() == 2) {    // expression ('<' '<' | '>' '>' '>' | '>' '>') expression
 			ret.add(ElementalTypes[0]);
@@ -383,19 +384,19 @@ public class JavaGraph extends DeadlockGraphMaker {
 
 		return methodName;
 	}
-
-	@Override
-	public ParserRuleContext generateExpression(String expressionText) {
+        
+        @Override
+        public ParserRuleContext generateExpression(String expressionText) {
 		JavaLexer lexer = new JavaLexer(CharStreams.fromString(expressionText));
 		CommonTokenStream commonTokenStream = new CommonTokenStream(lexer);
 		JavaParser parser = new JavaParser(commonTokenStream);
 
 		return parser.expression();
 	}
-
-	@Override
-	public boolean isUnlockMethodCall(String expressionText) {
-		return expressionText.endsWith("unlock();");
-	}
+        
+        @Override
+        public boolean isUnlockMethodCall(String expressionText) {
+                return expressionText.endsWith("unlock();");
+        }
 
 }

@@ -11,7 +11,6 @@
  */
 package deadlocktracker.containers;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -358,18 +357,18 @@ public class DeadlockStorage {
 	}
 
 	public static Pair<String, String> locateClassPath(String fullClassName) {
-		String packName = getPublicPackageName(fullClassName);
+                String packName = getPublicPackageName(fullClassName);
 		if(packName != null) {
-			if (!packName.contentEquals(fullClassName)) {
-				int idx = packName.length();
-				String className = fullClassName.substring(idx);
-				if (className.contentEquals("*")) return new Pair<>(packName, className);
+                        if (!packName.contentEquals(fullClassName)) {
+                                int idx = packName.length();
+                                String className = fullClassName.substring(idx);
+                                if (className.contentEquals("*")) return new Pair<>(packName, className);
 
-				DeadlockClass c = PublicClasses.get(packName).get(className);
-				if (c != null) return new Pair<>(packName, className);
+                                DeadlockClass c = PublicClasses.get(packName).get(className);
+                                if (c != null) return new Pair<>(packName, className);
 
-				return locatePrivateClassPath(packName, fullClassName);
-			}
+                                return locatePrivateClassPath(packName, fullClassName);
+                        }
 		}
 
 		return null;

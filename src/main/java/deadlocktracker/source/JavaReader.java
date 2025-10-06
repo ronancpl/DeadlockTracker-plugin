@@ -11,7 +11,6 @@
  */
 package deadlocktracker.source;
 
-import deadlocktracker.DeadlockGraphMaker;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,20 +25,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 import language.java.JavaLexer;
 import language.java.JavaParser;
 import language.java.JavaParserBaseListener;
+
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.ParserRuleContext;
+
+import deadlocktracker.DeadlockGraphMaker;
 import deadlocktracker.containers.DeadlockClass;
-import deadlocktracker.containers.DeadlockClass.DeadlockClassType;
 import deadlocktracker.containers.DeadlockEnum;
 import deadlocktracker.containers.DeadlockFunction;
 import deadlocktracker.containers.DeadlockLock;
 import deadlocktracker.containers.DeadlockStorage;
 import deadlocktracker.containers.Pair;
+import deadlocktracker.containers.DeadlockClass.DeadlockClassType;
 import deadlocktracker.graph.DeadlockAbstractType;
 import deadlocktracker.strings.IgnoredTypes;
 import deadlocktracker.strings.LinkedTypes;
 import deadlocktracker.strings.ReflectedTypes;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.ParserRuleContext;
 
 /**
  *
@@ -577,17 +579,17 @@ public class JavaReader extends JavaParserBaseListener {
 			}
 		}
 	}
-
+        
 	private static String getSyncLockNameFromExpression(JavaParser.ParExpressionContext parCtx, int methodId) {
-		String fieldName = parCtx.expression().getText();
-		String lockName = DeadlockGraphMaker.getSyncLockName(fieldName, methodId);
-
-		Integer t = currentClass.getFieldVariable(lockName);
-		if (t == null) {
-			currentClass.addFieldVariable(0, lockName);
-		}
-
-		return lockName;
+                String fieldName = parCtx.expression().getText();
+                String lockName = DeadlockGraphMaker.getSyncLockName(fieldName, methodId);
+                
+                Integer t = currentClass.getFieldVariable(lockName);
+                if (t == null) {
+                        currentClass.addFieldVariable(0, lockName);
+                }
+		
+                return lockName;
 	}
 
 	private static JavaParser.ExpressionContext generateSyncLockExpression(String syncLockName, boolean lock) {
@@ -1080,7 +1082,7 @@ public class JavaReader extends JavaParserBaseListener {
 
 		if(st == en) return null;
 
-		ret.add(type.substring(st, en));
+		ret.add(type.substring(st, en).trim());
 		return ret;
 	}
 
@@ -1092,11 +1094,15 @@ public class JavaReader extends JavaParserBaseListener {
 	}
 
 	private static Integer fetchDataType(String type, DeadlockClass pc) {
-		List<Integer> compoundType = new LinkedList<>();
+                List<Integer> compoundType = new LinkedList<>();
 		String t = type;
 
 		Integer ret = -2;
 		DeadlockClass targetClass;     //search for class data type
+                
+                if (type.contains("Pair")) {
+                    int i = 0;
+                }
 
 		int idx = type.indexOf('[');
 		int c = 0;
@@ -1129,8 +1135,8 @@ public class JavaReader extends JavaParserBaseListener {
 		case SCRIPT:
 			return ElementalTypes[6];
 		}
-
-		try {
+                
+                try {
 			targetClass = pc.getImport(t);
 			if (targetClass == null) {
 				String path = DeadlockStorage.getPublicPackageName(pc);
@@ -1194,7 +1200,10 @@ public class JavaReader extends JavaParserBaseListener {
 
 					CompoundDataTypes.put(compoundType, ret);
 				}
-			}
+			} else {
+                                ret = BasicDataTypes.get(t);
+                                if(ret == null) ret = -2;
+                        }
 		}
 
 		return ret;

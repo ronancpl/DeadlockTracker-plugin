@@ -11,12 +11,6 @@
  */
 package deadlocktracker.containers;
 
-/**
- *
- * @author RonanLana
- */
-
-import deadlocktracker.DeadlockGraphMaker;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.LinkedHashSet;
@@ -25,6 +19,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import deadlocktracker.DeadlockGraphMaker;
+
 import java.util.Set;
 
 public class DeadlockClass {
@@ -54,7 +51,7 @@ public class DeadlockClass {
 
 	List<DeadlockFunction> methods = new ArrayList<>();
 	Map<String, Integer> fields = new HashMap();
-
+        
 	public DeadlockClass(DeadlockClassType ctype, String className, String packageName, String classPathName, List<String> superNames, boolean abstracted, DeadlockClass parentClass) {
 		type = ctype;
 		name = className;
@@ -182,16 +179,16 @@ public class DeadlockClass {
 	public Integer getFieldVariable(String name) {
 		return fields.get(name);
 	}
-
-	public void removeFieldVariable(String name) {
+        
+        public void removeFieldVariable(String name) {
 		fields.remove(name);
 	}
 
 	public Map<String, Integer> getFieldVariables() {
 		return fields;
 	}
-
-	public void addClassMethod(DeadlockFunction classMethod) {
+        
+        public void addClassMethod(DeadlockFunction classMethod) {
 		methods.add(classMethod);
 	}
 
@@ -287,8 +284,8 @@ public class DeadlockClass {
 		DeadlockFunction ref = null;
 
 		for(DeadlockFunction mdf : methods) {
-			byte exactState = mdf.hasExactHeading(name, params);
-			if(exactState == 1) {
+                        byte exactState = mdf.hasExactHeading(name, params);
+                        if(exactState == 1) {
 				return mdf;
 			} else if(exactState == 0) {
 				ref = mdf;
@@ -319,7 +316,7 @@ public class DeadlockClass {
 	public void setEnums(Set<String> values) {
 		importedEnums.addAll(values);
 	}
-
+        
 	@Override
 	public String toString() {
 		String s = "\t" + packName + name;

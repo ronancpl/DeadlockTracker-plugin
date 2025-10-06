@@ -74,7 +74,7 @@ public enum DeadlockAbstractType {
 			//System.out.println(DeadlockAbstractType.MAP);
 			return DeadlockAbstractType.MAP;
 
-		case "SyncLock":
+		case "SynchLock":
 		case "ReentrantReadWriteLock":
 		case "ReentrantLock":
 		case "ReadWriteLock":
