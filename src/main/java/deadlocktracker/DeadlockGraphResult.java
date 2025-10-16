@@ -47,6 +47,7 @@ public class DeadlockGraphResult {
 			locks.add(e.getLockId2());
 		}
 
+		System.out.println();
 		System.out.println("List of deadlocks:");
 		for (Integer i : locks) {
 			System.out.println(LockNames.get(i));

@@ -30,10 +30,10 @@ import deadlocktracker.containers.DeadlockStorage;
 import deadlocktracker.containers.Pair;
 import deadlocktracker.graph.DeadlockAbstractType;
 import deadlocktracker.graph.DeadlockGraphEntry;
-import deadlocktracker.graph.DeadlockGraphMethod;
 import deadlocktracker.graph.DeadlockGraphNodeCall;
 import deadlocktracker.graph.DeadlockGraphNodeLock;
 import deadlocktracker.graph.DeadlockGraphNodeScript;
+import deadlocktracker.graph.DeadlockGraphMethod;
 import deadlocktracker.source.CSharpReader;
 import deadlocktracker.strings.LinkedTypes;
 

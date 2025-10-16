@@ -46,7 +46,7 @@ public class DeadlockGraphCruiser {
 		Set<Integer> acquiredLocks = new HashSet<>();
 		List<Integer> seqLocks = new LinkedList<>();
 		List<Integer> seqAcqLocks = new ArrayList<>();
-		List<Integer> seqIntAcqLocks;
+		List<Integer> seqIntAcqLocks = Collections.emptyList();
 		Integer startAt;
 
 	}
@@ -87,10 +87,10 @@ public class DeadlockGraphCruiser {
 	static Map<Integer, Map<Integer, FunctionLockElement>> lockDependencies = new HashMap<>();
 
 	private static Pattern p = Pattern.compile("([\\w\\d_\\.]*)(\\[([\\w\\d_\\.]*)\\])?");
-	private static List<Pair<String,String>> startingMethods = startingMethods(DeadlockConfig.getProperty("entry_points"));
+	private static List<Pair<String, String>> startingMethods = startingMethods(DeadlockConfig.getProperty("entry_points"));
 
-	private static List<Pair<String,String>> startingMethods(String methodSeq) {
-		List<Pair<String,String>> list = new LinkedList<>();
+	private static List<Pair<String, String>> startingMethods(String methodSeq) {
+		List<Pair<String, String>> list = new LinkedList<>();
 		Matcher m = p.matcher(methodSeq);
 		while (m.find()) {
 			if (m.groupCount() >= 3 && m.group(2) != null) {
@@ -107,8 +107,9 @@ public class DeadlockGraphCruiser {
 		String fName = f.getName();
 		String cName = DeadlockStorage.getCanonClassName(f.getSourceClass());
 
-		for (Pair<String,String> p : startingMethods) {
-			if ((fName.contentEquals(p.left) || p.left.isEmpty()) && (p.right == null || cName.contentEquals(p.right))) {
+		for (Pair<String, String> p : startingMethods) {
+			if ((fName.contentEquals(p.left) || p.left.isEmpty())
+					&& (p.right == null || cName.contentEquals(p.right))) {
 				return true;
 			}
 		}
@@ -175,20 +176,25 @@ public class DeadlockGraphCruiser {
 				s += f.getName() + ",";
 			}
 
-			System.out.println("[WARNING] " + s.substring(0, s.length() - 1) + " has acquired lock count: " + ongoingLocks.acquiredLocks.size());
+			System.out.println("[WARNING] " + s.substring(0, s.length() - 1) + " has acquired lock count: "
+					+ ongoingLocks.acquiredLocks.size());
 		}
 	}
 
 	private static void insertGraphFunction(DeadlockFunction f) {
 		Integer i = functionMap.get(f);
-		if (i == null) functionMap.put(f, 1);
-		else functionMap.put(f, i + 1);
+		if (i == null)
+			functionMap.put(f, 1);
+		else
+			functionMap.put(f, i + 1);
 	}
 
 	private static void removeGraphFunction(DeadlockFunction f) {
 		Integer i = functionMap.get(f);
-		if (i == 1) functionMap.remove(f);
-		else functionMap.put(f, i - 1);
+		if (i == 1)
+			functionMap.remove(f);
+		else
+			functionMap.put(f, i - 1);
 	}
 
 	private void runSourceGraphFunction(DeadlockFunction f, Map<DeadlockFunction, DeadlockGraphMethod> g, FunctionPathNode uptrace) {
@@ -261,7 +267,9 @@ public class DeadlockGraphCruiser {
 		for (Entry<DeadlockFunction, DeadlockGraphMethod> e : functionGraph.entrySet()) {
 			DeadlockFunction f = e.getKey();
 			if (isStartingFunction(f) || runMethods.contains(f)) {
-				//System.out.println("Reading " + DeadlockStorage.getCanonClassName(f.getSourceClass()) + " >> " + f.getName());
+				// System.out.println("Reading " +
+				// DeadlockStorage.getCanonClassName(f.getSourceClass()) + " >> " +
+				// f.getName());
 				FunctionPathNode trace = new FunctionPathNode();
 				trace.startAt = 0;
 				runSourceGraphFunction(f, functionGraph, trace);
@@ -276,10 +284,13 @@ public class DeadlockGraphCruiser {
 			}
 		}
 
-		return n;   // in the end of who knows when
+		return n; // in the end of who knows when
 	}
 
 	private void incrementLockInFunction(Integer i, Integer k, DeadlockFunction nf) {
+		if (functionMilestones.get(nf).contains(k))
+			return;
+
 		Map<Integer, FunctionLockElement> locks = lockDependencies.get(i);
 		if (locks == null) {
 			locks = new HashMap<>();
@@ -305,17 +316,19 @@ public class DeadlockGraphCruiser {
 		}
 	}
 
-	private void fetchLockDependenciesInFunction(DeadlockFunction f, DeadlockFunction nf, FunctionPathNode n) {
-		List<Integer> fl = functionLocks.get(f).seqAcqLocks;
-		for (int a = 0; a < fl.size(); a++) {
-			Integer i = fl.get(a);  // lockId
+	private void fetchLockDependenciesInFunction(DeadlockFunction f, DeadlockFunction nf,
+			FunctionPathNode n) {
+		List<Integer> fl = functionLocks.get(f).seqIntAcqLocks;
+		Set<Integer> locks = new HashSet<>();
+		for (int a = functionLocks.get(f).startAt; a < fl.size(); a++) {
+			Integer i = fl.get(a); // lockId
 			if (i > 0) {
 				incrementLockInFunction(i, i, nf);
 
 				int j = fetchUnlockIndex(fl, i, a + 1, fl.size());
 				for (int h = a + 1; h < j; h++) {
 					Integer k = fl.get(h);
-					if (k > 0) {
+					if (k > 0 && !locks.contains(k)) {
 						int c = fetchUnlockIndex(fl, k, h, fl.size());
 						if (c > j) {
 							for (int m = h; m < j; m++) {
@@ -329,6 +342,8 @@ public class DeadlockGraphCruiser {
 						}
 					}
 				}
+
+				locks.add(i);
 			} else if (i < 0) {
 				decrementLockInFunction(-i, -i);
 			}
@@ -352,7 +367,8 @@ public class DeadlockGraphCruiser {
 
 	private static boolean containsLock(Integer i, Collection<FunctionLockElement> es) {
 		for (FunctionLockElement e : es) {
-			if (i.equals(e.lockId)) return true;
+			if (i.equals(e.lockId))
+				return true;
 		}
 
 		return false;
@@ -366,7 +382,7 @@ public class DeadlockGraphCruiser {
 	private static void makeRemissiveIndexLockFunctions() {
 		Set<Integer> acqLocks = new HashSet<>();
 		for (FunctionPathNode n : functionLocks.values()) {
-			for (Integer l : n.seqAcqLocks) {
+			for (Integer l : n.seqIntAcqLocks) {
 				if (l > 0) {
 					acqLocks.add(l);
 				}
@@ -378,8 +394,9 @@ public class DeadlockGraphCruiser {
 		}
 
 		for (Entry<DeadlockFunction, FunctionPathNode> e : functionLocks.entrySet()) {
-			for (Integer i : e.getValue().seqAcqLocks) {
-				if (i > 0) lockFunctions.get(i).add(e.getKey());
+			for (Integer i : e.getValue().seqIntAcqLocks) {
+				if (i > 0)
+					lockFunctions.get(i).add(e.getKey());
 			}
 		}
 	}
@@ -410,11 +427,11 @@ public class DeadlockGraphCruiser {
 		dumpLockDependency(LockNames);
 		makeRemissiveIndexLockFunctions();
 		detectDeadlocksInLockDependencies();
-		//dumpDeadlockFunctions(LockNames);
+		dumpDeadlockFunctions(LockNames);
 	}
 
 	private void createFunctionAcquiredLocks(DeadlockGraph graph) {
-		for(DeadlockFunction f : graph.getFunctionIds().keySet()) {
+		for (DeadlockFunction f : graph.getFunctionIds().keySet()) {
 			FunctionPathNode ftrace = new FunctionPathNode();
 			ftrace.startAt = 0;
 			functionLocks.put(f, ftrace);
@@ -461,7 +478,6 @@ public class DeadlockGraphCruiser {
 				}
 			}
 		}
-		System.out.println();
 
 		for (DeadlockFunction f : functions) {
 			System.out.println(f + " : " + functionLocks.get(f).seqIntAcqLocks + "," + functionMilestones.get(f));
