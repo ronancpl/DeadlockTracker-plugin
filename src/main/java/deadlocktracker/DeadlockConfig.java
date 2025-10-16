@@ -15,12 +15,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-import org.antlr.v4.runtime.tree.ParseTreeListener;
-
 import deadlocktracker.graph.maker.CSharpGraph;
 import deadlocktracker.graph.maker.JavaGraph;
 import deadlocktracker.source.CSharpReader;
 import deadlocktracker.source.JavaReader;
+
+import org.antlr.v4.runtime.tree.ParseTreeListener;
 
 /**
  *

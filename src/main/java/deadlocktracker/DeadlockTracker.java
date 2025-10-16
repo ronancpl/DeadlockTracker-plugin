@@ -137,7 +137,6 @@ public class DeadlockTracker extends AbstractMojo {
 		DeadlockGraphResult.reportDeadlocks(mds, r);
 
 		//DeadlockGraphMaker.dumpGraph();
-
 	}
 
 	@Override

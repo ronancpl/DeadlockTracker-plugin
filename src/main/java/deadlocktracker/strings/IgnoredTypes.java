@@ -94,8 +94,8 @@ public class IgnoredTypes {
 		ignored.add("InetAddress");
 
 		// ----- specific data types ---------
-                
-                ignored.add("Thread");
+
+		ignored.add("Thread");
 
 		ignored.add("SeekableLittleEndianAccessor");
 		ignored.add("PacketLittleEndianWriter");

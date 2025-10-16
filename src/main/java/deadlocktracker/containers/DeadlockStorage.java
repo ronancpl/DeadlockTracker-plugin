@@ -357,18 +357,18 @@ public class DeadlockStorage {
 	}
 
 	public static Pair<String, String> locateClassPath(String fullClassName) {
-                String packName = getPublicPackageName(fullClassName);
+		String packName = getPublicPackageName(fullClassName);
 		if(packName != null) {
-                        if (!packName.contentEquals(fullClassName)) {
-                                int idx = packName.length();
-                                String className = fullClassName.substring(idx);
-                                if (className.contentEquals("*")) return new Pair<>(packName, className);
+			if (!packName.contentEquals(fullClassName)) {
+				int idx = packName.length();
+				String className = fullClassName.substring(idx);
+				if (className.contentEquals("*")) return new Pair<>(packName, className);
 
-                                DeadlockClass c = PublicClasses.get(packName).get(className);
-                                if (c != null) return new Pair<>(packName, className);
+				DeadlockClass c = PublicClasses.get(packName).get(className);
+				if (c != null) return new Pair<>(packName, className);
 
-                                return locatePrivateClassPath(packName, fullClassName);
-                        }
+				return locatePrivateClassPath(packName, fullClassName);
+			}
 		}
 
 		return null;
@@ -419,7 +419,8 @@ public class DeadlockStorage {
 		return h;
 	}
 
-	private static String dumpCachedImports() {
+	/*
+        private static String dumpCachedImports() {
 		String s = "--------\n PUBLIC IMPORTS:\n";
 		for(Entry<String, Map<String, DeadlockClass>> m : PublicClasses.entrySet()) {
 			s += ("\nPACKAGE " + m.getKey() + "\n");
@@ -433,6 +434,7 @@ public class DeadlockStorage {
 
 		return s;
 	}
+	 */
 
 	private static String dumpCachedPackages() {
 		String s = "--------\n PUBLIC:\n";
@@ -458,7 +460,7 @@ public class DeadlockStorage {
 	public String toString() {
 		String s = "";
 
-		s += dumpCachedPackages() + "\n" + dumpCachedImports();
+		s += dumpCachedPackages() + "\n";// + dumpCachedImports();
 
 		s += "--------\n LOCKS:\n";
 		for(Map.Entry<String, DeadlockLock> l : Locks.entrySet()) {

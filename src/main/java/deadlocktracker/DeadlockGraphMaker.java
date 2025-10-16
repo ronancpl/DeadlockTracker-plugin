@@ -22,10 +22,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import language.java.JavaParser;
-import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.tree.ParseTreeListener;
-
 import deadlocktracker.containers.DeadlockClass;
 import deadlocktracker.containers.DeadlockEnum;
 import deadlocktracker.containers.DeadlockFunction;
@@ -40,6 +36,10 @@ import deadlocktracker.graph.DeadlockGraphNodeLock;
 import deadlocktracker.graph.DeadlockGraphNodeScript;
 import deadlocktracker.source.CSharpReader;
 import deadlocktracker.strings.LinkedTypes;
+
+import language.java.JavaParser;
+import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.ParseTreeListener;
 
 /**
  *
@@ -79,8 +79,8 @@ public abstract class DeadlockGraphMaker {
 
 	private Map<DeadlockFunction, Integer> GraphFunctionIds = new HashMap<>();
 	private Map<DeadlockFunction, DeadlockGraphMethod> GraphFunctions = new HashMap<>();
-        
-        protected DeadlockClass refClass = null;
+
+	protected DeadlockClass refClass = null;
 
 	private Integer runningFid = 0;
 	private Integer lockId;
@@ -91,10 +91,10 @@ public abstract class DeadlockGraphMaker {
 	public abstract Set<Integer> getMethodReturnType(DeadlockGraphMethod node, Integer classType, ParserRuleContext methodCall, DeadlockFunction sourceMethod, DeadlockClass sourceClass);
 	public abstract Set<Integer> parseMethodCalls(DeadlockGraphMethod node, ParserRuleContext callCtx, DeadlockFunction sourceMethod, DeadlockClass sourceClass, boolean filter);	
 	public abstract String parseMethodName(ParserRuleContext callCtx);
-        public abstract ParserRuleContext generateExpression(String expressionText);
-        public abstract boolean isUnlockMethodCall(String expressionText);
-        
-        protected List<Integer> getArgumentTypes(DeadlockGraphMethod node, ParserRuleContext expList, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
+	public abstract ParserRuleContext generateExpression(String expressionText);
+	public abstract boolean isUnlockMethodCall(String expressionText);
+
+	protected List<Integer> getArgumentTypes(DeadlockGraphMethod node, ParserRuleContext expList, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
 		List<Integer> ret = new LinkedList<>();
 		for(ParserRuleContext exp : getArgumentList(expList)) {
 			for (Integer argType : parseMethodCalls(node, exp, sourceMethod, sourceClass)) {
@@ -264,7 +264,7 @@ public abstract class DeadlockGraphMaker {
 	}
 
 	protected Integer getPrimaryTypeOnFieldVars(String name, DeadlockClass sourceClass) {
-                Integer t = sourceClass.getFieldVariable(name);
+		Integer t = sourceClass.getFieldVariable(name);
 		if(t != null) return t;
 
 		if (isImportEnum(name, sourceClass)) {
@@ -333,7 +333,7 @@ public abstract class DeadlockGraphMaker {
 			//System.out.println("FAILED TO FIND '" + name + "' ON " + DeadlockStorage.getCanonClassName(sourceClass) + ", call was " + curCall);
 			return -1;
 		}
-                
+
 		if(t.equals(ElementalTypes[5]) || t == 0) {
 			lockId = getLockId(name, sourceClass);
 		}
@@ -363,81 +363,81 @@ public abstract class DeadlockGraphMaker {
 
 		return retType;
 	}
-        
-        protected Integer getTypeId(String name, DeadlockClass sourceClass) {
-                DeadlockClass mdc = DeadlockStorage.locateClass(name, sourceClass);
-                if (mdc != null) {
-                        return ClassDataTypeIds.get(mdc);
-                } else if (BasicDataTypeIds.containsKey(name)) {
-                        return BasicDataTypeIds.get(name);
-                } else {
-                        return -2;
-                }
-        }
-        
-        protected Integer getTypeFromFieldVariable(int expType, DeadlockClass c, String idName, DeadlockFunction sourceMethod) {
-                Set<Integer> templateTypes = null;
 
-                if(c == null) {
-                        List<Integer> cTypes = CompoundDataTypes.get(expType);
-                        if(cTypes != null) {
-                                c = getClassFromType(cTypes.get(cTypes.size() - 1));
+	protected Integer getTypeId(String name, DeadlockClass sourceClass) {
+		DeadlockClass mdc = DeadlockStorage.locateClass(name, sourceClass);
+		if (mdc != null) {
+			return ClassDataTypeIds.get(mdc);
+		} else if (BasicDataTypeIds.containsKey(name)) {
+			return BasicDataTypeIds.get(name);
+		} else {
+			return -2;
+		}
+	}
 
-                                if(c == null) {
-                                        //System.out.println("Compound FAILED @ " + cTypes.get(cTypes.size() - 1));
-                                } else {
-                                        templateTypes = c.getMaskedTypeSet();
-                                }
-                        }
+	protected Integer getTypeFromFieldVariable(int expType, DeadlockClass c, String idName, DeadlockFunction sourceMethod) {
+		Set<Integer> templateTypes = null;
 
-                        if(c == null) {
-                                String typeName = BasicDataTypes.get(expType);
+		if(c == null) {
+			List<Integer> cTypes = CompoundDataTypes.get(expType);
+			if(cTypes != null) {
+				c = getClassFromType(cTypes.get(cTypes.size() - 1));
 
-                                if(typeName != null && typeName.charAt(typeName.length() - 1) == ']') {
-                                        if(idName.contentEquals("length")) {
-                                                return ElementalTypes[0];
-                                        }
-                                }
+				if(c == null) {
+					//System.out.println("Compound FAILED @ " + cTypes.get(cTypes.size() - 1));
+				} else {
+					templateTypes = c.getMaskedTypeSet();
+				}
+			}
 
-                                //System.out.println("FAILED @ " + expType);
-                                return -2;
-                        }
-                } else {
-                        if(c.isEnum()) {    // it's an identifier defining an specific item from an enum, return self-type
-                                if(idName.contentEquals("length")) {
-                                        return ElementalTypes[0];
-                                }
+			if(c == null) {
+				String typeName = BasicDataTypes.get(expType);
 
-                                return expType;
-                        }
+				if(typeName != null && typeName.charAt(typeName.length() - 1) == ']') {
+					if(idName.contentEquals("length")) {
+						return ElementalTypes[0];
+					}
+				}
 
-                        templateTypes = c.getMaskedTypeSet();
-                }
+				//System.out.println("FAILED @ " + expType);
+				return -2;
+			}
+		} else {
+			if(c.isEnum()) {    // it's an identifier defining an specific item from an enum, return self-type
+				if(idName.contentEquals("length")) {
+					return ElementalTypes[0];
+				}
 
-                Integer type = getPrimaryType(idName, sourceMethod, c);
-                if(type == null) {
-                        DeadlockClass mdc = DeadlockStorage.locateInternalClass(idName, c);  // element could be a private class reference
-                        if(mdc != null) {
-                                return ClassDataTypeIds.get(mdc);
-                        }
+				return expType;
+			}
 
-                        //System.out.println("SOMETHING OUT OF CALL FOR FIELD " + curCtx.IDENTIFIER().getText() + " ON " + DeadlockStorage.getCanonClassName(c));
-                        return -1;
-                }
+			templateTypes = c.getMaskedTypeSet();
+		}
 
-                return getRelevantType(type, templateTypes, c, expType);
-        }
-        
-        protected Integer getTypeFromIdentifier(int expType, String idName, DeadlockFunction sourceMethod) {
-                if(isIgnoredType(expType)) {
-                        return -2;
-                }
+		Integer type = getPrimaryType(idName, sourceMethod, c);
+		if(type == null) {
+			DeadlockClass mdc = DeadlockStorage.locateInternalClass(idName, c);  // element could be a private class reference
+			if(mdc != null) {
+				return ClassDataTypeIds.get(mdc);
+			}
 
-                DeadlockClass c = getClassFromType(expType);
-                Integer ret = getTypeFromFieldVariable(expType, c, idName, sourceMethod);
-                
-                return ret;
-        }
+			//System.out.println("SOMETHING OUT OF CALL FOR FIELD " + curCtx.IDENTIFIER().getText() + " ON " + DeadlockStorage.getCanonClassName(c));
+			return -1;
+		}
+
+		return getRelevantType(type, templateTypes, c, expType);
+	}
+
+	protected Integer getTypeFromIdentifier(int expType, String idName, DeadlockFunction sourceMethod) {
+		if(isIgnoredType(expType)) {
+			return -2;
+		}
+
+		DeadlockClass c = getClassFromType(expType);
+		Integer ret = getTypeFromFieldVariable(expType, c, idName, sourceMethod);
+
+		return ret;
+	}
 
 	private Pair<DeadlockFunction, Set<Integer>> getMethodDefinitionFromClass(DeadlockClass c, String method, List<Integer> argTypes) {
 		DeadlockFunction mdf = c.getMethod(false, method, argTypes);
@@ -625,7 +625,7 @@ public abstract class DeadlockGraphMaker {
 			}
 		} else {
 			if(c.isEnum()) {
-                                String methodName = method.toLowerCase();
+				String methodName = method.toLowerCase();
 				if(methodName.contentEquals("values")) {    // this will return a Collection of enums, since Collection is being ignored, so this is
 					ret.add(-2);
 					return ret;
@@ -665,7 +665,7 @@ public abstract class DeadlockGraphMaker {
                                 System.out.println("  " + mdf.getName() + " src " + DeadlockStorage.getCanonClassName(mdf.getSourceClass()));
                         }
                 }
-                */
+		 */
 
 		if(allMethodImplementations.isEmpty()) {
 			System.out.println("[Warning] EMPTY method node: " + methodCall.getText() + " @ " + method + " from " + DeadlockStorage.getCanonClassName(c));
@@ -696,18 +696,18 @@ public abstract class DeadlockGraphMaker {
 				retTypes.add(getRelevantType(retMethod.getReturn(), retTemplateTypes, c, expType));
 			}
 		}
-                
-                if (!retTypes.isEmpty()) {
-                        ret.addAll(retTypes);
-                } else {
-                        ret.add(-3);
-                }
+
+		if (!retTypes.isEmpty()) {
+			ret.addAll(retTypes);
+		} else {
+			ret.add(-3);
+		}
 
 		return ret;
 	}
 
 	protected Integer getPreparedReturnType(String methodName, Integer thisType) {
-                switch(methodName) {
+		switch(methodName) {
 		case "isEmpty":
 		case "equals":
 		case "equalsIgnoreCase":
@@ -731,8 +731,8 @@ public abstract class DeadlockGraphMaker {
 			return ElementalTypes[0];
 
 		case "newInstance":
-                case "clone":
-                        return thisType;
+		case "clone":
+			return thisType;
 
 		case "invokeFunction":
 			return -2;
@@ -775,122 +775,122 @@ public abstract class DeadlockGraphMaker {
 			}
 		}
 	}
-        
-        private String getLockFieldName(String resourceName) {
-                String[] sp = resourceName.split("_");
-                if (sp.length > 1) {
-                        String lockFieldName = "";
-                        for (int i = 0; i < sp.length - 2; i++) {
-                                lockFieldName += sp[i] + "_";
-                        }
-                        lockFieldName = lockFieldName.substring(0, lockFieldName.length() - 1);
 
-                        return lockFieldName;
-                } else {
-                        return resourceName;
-                }
-        }
+	private String getLockFieldName(String resourceName) {
+		String[] sp = resourceName.split("_");
+		if (sp.length > 1) {
+			String lockFieldName = "";
+			for (int i = 0; i < sp.length - 2; i++) {
+				lockFieldName += sp[i] + "_";
+			}
+			lockFieldName = lockFieldName.substring(0, lockFieldName.length() - 1);
 
-        private Pair<Integer, String> fetchLockField(String expressionText, boolean isLock, DeadlockGraphMethod node, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
-                ParserRuleContext ctx = generateExpression(expressionText);
-                parseMethodCalls(node, ctx, sourceMethod, sourceClass, true);
-                int typeId = ClassDataTypeIds.get(refClass);
+			return lockFieldName;
+		} else {
+			return resourceName;
+		}
+	}
 
-                int idx = Integer.MAX_VALUE;
+	private Pair<Integer, String> fetchLockField(String expressionText, boolean isLock, DeadlockGraphMethod node, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
+		ParserRuleContext ctx = generateExpression(expressionText);
+		parseMethodCalls(node, ctx, sourceMethod, sourceClass, true);
+		int typeId = ClassDataTypeIds.get(refClass);
 
-                int idx1 = ctx.getText().lastIndexOf('.');  // upper field : '.'
-                if (idx1 > -1) {
-                        idx = Math.min(idx, idx1);
-                }
+		int idx = Integer.MAX_VALUE;
 
-                int idx2 = ctx.getText().lastIndexOf('>');  // upper field : '->'
-                if (idx2 > -1) {
-                        idx = Math.min(idx, idx2 - 1);
-                }
+		int idx1 = ctx.getText().lastIndexOf('.');  // upper field : '.'
+		if (idx1 > -1) {
+			idx = Math.min(idx, idx1);
+		}
 
-                if (idx < Integer.MAX_VALUE) {
-                        expressionText = ctx.getText().substring(0, idx);
-                }
+		int idx2 = ctx.getText().lastIndexOf('>');  // upper field : '->'
+		if (idx2 > -1) {
+			idx = Math.min(idx, idx2 - 1);
+		}
 
-                
-                return new Pair<>(isLock ? typeId : -typeId, expressionText);
-        }
-        
+		if (idx < Integer.MAX_VALUE) {
+			expressionText = ctx.getText().substring(0, idx);
+		}
+
+
+		return new Pair<>(isLock ? typeId : -typeId, expressionText);
+	}
+
 	protected Set<Integer> parseMethodCalls(DeadlockGraphMethod node, ParserRuleContext call, DeadlockFunction sourceMethod, DeadlockClass sourceClass) {
-                String callText = call.getText();
-            
-                Set<Integer> metRetTypes = parseMethodCalls(node, call, sourceMethod, sourceClass, false);
+		String callText = call.getText();
+
+		Set<Integer> metRetTypes = parseMethodCalls(node, call, sourceMethod, sourceClass, false);
 
 		Set<Integer> retTypes = new HashSet<>();
 		for (Integer ret : metRetTypes) {
 			if (metRetTypes.size() == 1) {
-                                if(ret == -1) {
-                                        // apply a poor-man's filter for missed cases
-                                        String expr = call.getText(), base;
+				if(ret == -1) {
+					// apply a poor-man's filter for missed cases
+					String expr = call.getText(), base;
 
-                                        int idx = expr.indexOf('.');
-                                        if(idx != -1) {
-                                                base = expr.substring(0, idx);
-                                        } else {
-                                                base = expr;
+					int idx = expr.indexOf('.');
+					if(idx != -1) {
+						base = expr.substring(0, idx);
+					} else {
+						base = expr;
 
-                                                idx = base.indexOf('(');
-                                                if(idx != -1) {
-                                                        base = base.substring(0, idx);
-                                                }
-                                        }
+						idx = base.indexOf('(');
+						if(idx != -1) {
+							base = base.substring(0, idx);
+						}
+					}
 
-                                        String methodName = parseMethodName(call);
-                                        methodName = methodName.toLowerCase();
+					String methodName = parseMethodName(call);
+					methodName = methodName.toLowerCase();
 
-                                        if(base.contentEquals("Math")) {
-                                                if(methodName.contentEquals("floor") || methodName.contentEquals("ceil")) {
-                                                        retTypes.add(ElementalTypes[0]);
-                                                        continue;
-                                                }
+					if(base.contentEquals("Math")) {
+						if(methodName.contentEquals("floor") || methodName.contentEquals("ceil")) {
+							retTypes.add(ElementalTypes[0]);
+							continue;
+						}
 
-                                                retTypes.add(ElementalTypes[1]);
-                                                continue;
-                                        } else if(base.contentEquals("System") || base.contentEquals("Arrays") || base.contentEquals("Collections") || base.contentEquals("Data")) {
-                                                retTypes.add(-1);
-                                                continue;
-                                        } else {
-                                                ret = getPreparedReturnType(methodName, ClassDataTypeIds.get(sourceClass));
-                                                if(ret != -1) {
-                                                        retTypes.add(ret);
-                                                        continue;
-                                                }
-                                        }
+						retTypes.add(ElementalTypes[1]);
+						continue;
+					} else if(base.contentEquals("System") || base.contentEquals("Arrays") || base.contentEquals("Collections") || base.contentEquals("Data")) {
+						retTypes.add(-1);
+						continue;
+					} else {
+						ret = getPreparedReturnType(methodName, ClassDataTypeIds.get(sourceClass));
+						if(ret != -1) {
+							retTypes.add(ret);
+							continue;
+						}
+					}
 
-                                        System.out.println("[Warning] COULD NOT DETERMINE " + call.getText() + " on src " + DeadlockStorage.getCanonClassName(sourceClass) + ", ret " + ret);
-                                } else if (ret == -3) {
-                                        String prefixLockName = DeadlockGraphMaker.getSyncLockName();
-                                        
-                                        if (callText.startsWith(prefixLockName)) {
-                                                String fieldExpr = getLockFieldName(callText.substring(prefixLockName.length()));
-                                                Pair<Integer, String> lockField = fetchLockField(fieldExpr, !isUnlockMethodCall(callText), node, sourceMethod, sourceClass);
-                                                if (lockField != null) {
-                                                        DeadlockClass c = getClassFromType(Math.abs(lockField.getLeft()));
-                                                        if(c != null) {
-                                                                String synchLockName = DeadlockGraphMaker.getSyncLockName(lockField.getRight(), 0);
-                                                                Integer field = c.getFieldVariable(synchLockName);
-                                                                if (field == null) {
-                                                                        c.addFieldVariable(0, synchLockName);
-                                                                        CSharpReader.processLock(c, "SynchLock", synchLockName, synchLockName);   // create a lock representation of the synchronized modifier
-                                                                }
-                                                                
-                                                                getPrimaryType(synchLockName, sourceMethod, c);     // to retrieve lockId
+					System.out.println("[Warning] COULD NOT DETERMINE " + call.getText() + " on src " + DeadlockStorage.getCanonClassName(sourceClass) + ", ret " + ret);
+				} else if (ret == -3) {
+					String prefixLockName = DeadlockGraphMaker.getSyncLockName();
 
-                                                                if (lockField.getLeft() > 0) {
-                                                                        evaluateLockFunction("lock", Collections.emptyList(), lockField.getLeft(), node);
-                                                                } else {
-                                                                        evaluateLockFunction("unlock", Collections.emptyList(), lockField.getLeft(), node);
-                                                                }
-                                                        }
-                                                }
-                                        }
-                                }
-                        }
+					if (callText.startsWith(prefixLockName)) {
+						String fieldExpr = getLockFieldName(callText.substring(prefixLockName.length()));
+						Pair<Integer, String> lockField = fetchLockField(fieldExpr, !isUnlockMethodCall(callText), node, sourceMethod, sourceClass);
+						if (lockField != null) {
+							DeadlockClass c = getClassFromType(Math.abs(lockField.getLeft()));
+							if(c != null) {
+								String synchLockName = DeadlockGraphMaker.getSyncLockName(lockField.getRight(), 0);
+								Integer field = c.getFieldVariable(synchLockName);
+								if (field == null) {
+									c.addFieldVariable(0, synchLockName);
+									CSharpReader.processLock(c, "SynchLock", synchLockName, synchLockName);   // create a lock representation of the synchronized modifier
+								}
+
+								getPrimaryType(synchLockName, sourceMethod, c);     // to retrieve lockId
+
+								if (lockField.getLeft() > 0) {
+									evaluateLockFunction("lock", Collections.emptyList(), lockField.getLeft(), node);
+								} else {
+									evaluateLockFunction("unlock", Collections.emptyList(), lockField.getLeft(), node);
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 
 		metRetTypes.remove(-1);
@@ -934,17 +934,17 @@ public abstract class DeadlockGraphMaker {
 		cid = getThisType(sourceClass.getParent());
 		return cid;
 	}
-        
-        private void parseMethodNode(DeadlockFunction method, DeadlockClass sourceClass) {
+
+	private void parseMethodNode(DeadlockFunction method, DeadlockClass sourceClass) {
 		DeadlockGraphMethod node = GraphFunctions.get(method);
-                
+
 		for(ParserRuleContext call : method.getMethodCalls()) {
-                        parseMethodCalls(node, call, method, sourceClass);
+			parseMethodCalls(node, call, method, sourceClass);
 		}
 	}
 
 	private void reinstanceCachedMaps(DeadlockStorage metadata) {
-                BasicDataTypes.put(0, "SynchLock");
+		BasicDataTypes.put(0, "SynchLock");
 		for(Entry<String, Integer> e : metadata.getBasicDataTypes().entrySet()) {
 			Integer i = e.getValue();
 			String s = e.getKey();
@@ -1037,13 +1037,13 @@ public abstract class DeadlockGraphMaker {
 			parseMethodNode(f, f.getSourceClass());
 		}
 	}
-        
-        public static String getSyncLockName() {
+
+	public static String getSyncLockName() {
 		return "synchLock_";
 	}
-        
-        public static String getSyncLockName(String itemName, int methodId) {
-                return "synchLock_" + itemName + "_" + methodId;
+
+	public static String getSyncLockName(String itemName, int methodId) {
+		return "synchLock_" + itemName + "_" + methodId;
 	}
 
 	public Set<Integer> generateEnumReferences() {
@@ -1142,7 +1142,7 @@ public abstract class DeadlockGraphMaker {
 			//e.printStackTrace();
 
 			//dumpMemory();
-                        throw e;
+			throw e;
 		}
 
 		return new DeadlockGraph(GraphFunctionIds, GraphFunctions);
@@ -1242,7 +1242,7 @@ public abstract class DeadlockGraphMaker {
 			List<DeadlockGraphEntry> list = e.right.right.getEntryList();
 
 			if(list.size() > 0) {
-				System.out.println(DeadlockStorage.getCanonClassName(e.right.left.getSourceClass()) + " >> " + e.right.left.getName() + " id: " + e.left);
+				System.out.println(e.right.left + " id: " + e.left);
 				for(DeadlockGraphEntry n : list) {
 					System.out.print(n.getGraphEntryPoints() + " ");
 				}

@@ -11,6 +11,7 @@
  */
 package deadlocktracker.source;
 
+import deadlocktracker.DeadlockGraphMaker;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,25 +26,23 @@ import java.util.Collections;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import deadlocktracker.containers.DeadlockClass;
+import deadlocktracker.containers.DeadlockClass.DeadlockClassType;
+import deadlocktracker.containers.DeadlockEnum;
+import deadlocktracker.containers.DeadlockFunction;
+import deadlocktracker.containers.DeadlockLock;
+import deadlocktracker.containers.DeadlockStorage;
+import deadlocktracker.containers.Pair;
+import deadlocktracker.graph.DeadlockAbstractType;
+import deadlocktracker.strings.IgnoredTypes;
+import deadlocktracker.strings.LinkedTypes;
+import deadlocktracker.strings.ReflectedTypes;
 import language.csharp.CSharpLexer;
 import language.csharp.CSharpParser;
 import language.csharp.CSharpParserBaseListener;
 
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-
-import deadlocktracker.DeadlockGraphMaker;
-import deadlocktracker.containers.DeadlockClass;
-import deadlocktracker.containers.DeadlockEnum;
-import deadlocktracker.containers.DeadlockFunction;
-import deadlocktracker.containers.DeadlockLock;
-import deadlocktracker.containers.DeadlockStorage;
-import deadlocktracker.containers.Pair;
-import deadlocktracker.containers.DeadlockClass.DeadlockClassType;
-import deadlocktracker.graph.DeadlockAbstractType;
-import deadlocktracker.strings.IgnoredTypes;
-import deadlocktracker.strings.LinkedTypes;
-import deadlocktracker.strings.ReflectedTypes;
 
 /**
  *
@@ -103,8 +102,8 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 	private static Map<Integer, Pair<DeadlockClass, Integer>> volatileMaskedTypes = new HashMap<>();
 	private static Map<Integer, Pair<String, String>> volatileDataTypes = new HashMap<>();  // cannot recover the import classes at the first parsing, so the type definition comes at the second rundown
-        
-        private static DeadlockClass defaultClass = new DeadlockClass(DeadlockClassType.CLASS, "_DefaultClass", "_package.", "", Collections.emptyList(), true, null);
+
+	private static DeadlockClass defaultClass = new DeadlockClass(DeadlockClassType.CLASS, "_DefaultClass", "_package.", "", Collections.emptyList(), true, null);
 
 	public void setSourceDirPrefixPath(String sourceDirPath) {
 		sourceDirPath = sourceDirPath.trim().toLowerCase();
@@ -164,7 +163,7 @@ public class CSharpReader extends CSharpParserBaseListener {
 	@Override
 	public void enterUsing_directives(CSharpParser.Using_directivesContext ctx) {
 		for (CSharpParser.Using_directiveContext ctxd : ctx.using_directive()) {
-                        String s = "";
+			String s = "";
 			if (ctxd instanceof CSharpParser.UsingAliasDirectiveContext) {
 				CSharpParser.UsingAliasDirectiveContext ctxa = (CSharpParser.UsingAliasDirectiveContext) ctxd;
 				s = ctxa.namespace_or_type_name().getText();
@@ -175,8 +174,8 @@ public class CSharpReader extends CSharpParserBaseListener {
 				CSharpParser.UsingStaticDirectiveContext ctxs = (CSharpParser.UsingStaticDirectiveContext) ctxd;
 				s = ctxs.namespace_or_type_name().getText();
 			}
-                        
-                        currentImportList.add(s);
+
+			currentImportList.add(s);
 		}
 	}
 
@@ -270,7 +269,7 @@ public class CSharpReader extends CSharpParserBaseListener {
 		if(currentClass != null) {
 			classStack.add(currentClass);
 			currentClass = new DeadlockClass(DeadlockClassType.CLASS, className, currentPackageName.peek(), getPathName(className), superNames, isAbstract, currentClass);
-                        currentClass.addImport(currentPackageName.peek().substring(0, currentPackageName.peek().length() - 1));
+			currentClass.addImport(currentPackageName.peek().substring(0, currentPackageName.peek().length() - 1));
 		} else {
 			currentCompleteFileClassName = currentPackageName.peek() + className;
 
@@ -278,7 +277,7 @@ public class CSharpReader extends CSharpParserBaseListener {
 			if (idx > -1) className = className.substring(idx + 1);
 
 			currentClass = new DeadlockClass(DeadlockClassType.CLASS, className, currentPackageName.peek(), getPathName(className), superNames, isAbstract, null);
-                        currentClass.addImport(currentPackageName.peek().substring(0, currentPackageName.peek().length() - 1));
+			currentClass.addImport(currentPackageName.peek().substring(0, currentPackageName.peek().length() - 1));
 		}
 
 		InheritanceTree.put(currentClass, new LinkedList<>());
@@ -372,11 +371,11 @@ public class CSharpReader extends CSharpParserBaseListener {
 		if(currentClass != null) {
 			classStack.add(currentClass);
 			currentClass = new DeadlockClass(DeadlockClassType.INTERFACE, className, currentPackageName.peek(), getPathName(className), superNames, true, currentClass);
-                        currentClass.addImport(currentPackageName.peek().substring(0, currentPackageName.peek().length() - 1));
+			currentClass.addImport(currentPackageName.peek().substring(0, currentPackageName.peek().length() - 1));
 		} else {
 			currentCompleteFileClassName = currentPackageName.peek() + className;
 			currentClass = new DeadlockClass(DeadlockClassType.INTERFACE, className, currentPackageName.peek(), getPathName(className), superNames, true, null);
-                        currentClass.addImport(currentPackageName.peek().substring(0, currentPackageName.peek().length() - 1));
+			currentClass.addImport(currentPackageName.peek().substring(0, currentPackageName.peek().length() - 1));
 		}
 
 		InheritanceTree.put(currentClass, new LinkedList<>());
@@ -457,8 +456,8 @@ public class CSharpReader extends CSharpParserBaseListener {
 		} else {
 			mdc = currentClass;
 		}
-                
-                DeadlockFunction method = new DeadlockFunction(methodName, mdc, methodStack.isEmpty() ? null : methodStack.peek(), currentAbstract);
+
+		DeadlockFunction method = new DeadlockFunction(methodName, mdc, methodStack.isEmpty() ? null : methodStack.peek(), currentAbstract);
 		Pair<Integer, Pair<List<Integer>, Map<Long, Integer>>> retParamTypes = getMethodMetadata(ctx, retTypeName, method);
 
 		method.setMethodMetadata(retParamTypes.left, retParamTypes.right.left, retParamTypes.right.right);
@@ -466,13 +465,13 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 		methodCallCountStack.add(runningMethodCallCount.get());
 		runningMethodCallCount.set(0);
-                
-                if (mdc != null) mdc.addClassMethod(method);
+
+		if (mdc != null) mdc.addClassMethod(method);
 	}
 
 	private void exitMethodDeclaration(boolean lambdaMethod) {
 		DeadlockFunction method = methodStack.pop();
-                if(lambdaMethod) {
+		if(lambdaMethod) {
 			// book-keeping possible Runnable functions to be dealt with later on the parsing
 
 			RunnableFunctions.put(method, true);
@@ -480,31 +479,31 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 		runningMethodCallCount.set(methodCallCountStack.pop());
 	}
-        
-        @Override
+
+	@Override
 	public void enterProperty_declaration(CSharpParser.Property_declarationContext ctx) {
 		String typeText = ((CSharpParser.Typed_member_declarationContext) ctx.getParent()).type_().getText();
-                String vdName = ctx.member_name().getText();
-                
-                String tt = getFullTypeText(typeText, vdName);
-                int type = getTypeId(tt, currentCompleteFileClassName);
+		String vdName = ctx.member_name().getText();
 
-                if (currentClass != null) currentClass.addFieldVariable(type, vdName);
+		String tt = getFullTypeText(typeText, vdName);
+		int type = getTypeId(tt, currentCompleteFileClassName);
+
+		if (currentClass != null) currentClass.addFieldVariable(type, vdName);
 	}
 
 	@Override
 	public void enterMethod_declaration(CSharpParser.Method_declarationContext ctx) {
 		List<String> list = new ArrayList<>();
-                
-                for (CSharpParser.IdentifierContext name : ctx.method_member_name().identifier()) {
+
+		for (CSharpParser.IdentifierContext name : ctx.method_member_name().identifier()) {
 			list.add(name.getText());
 		}
 
-                String typeName = "void";
-                if (ctx.getParent() instanceof CSharpParser.Typed_member_declarationContext)  {
-                        typeName = ((CSharpParser.Typed_member_declarationContext) ctx.getParent()).type_().getText();
-                }
-                
+		String typeName = "void";
+		if (ctx.getParent() instanceof CSharpParser.Typed_member_declarationContext)  {
+			typeName = ((CSharpParser.Typed_member_declarationContext) ctx.getParent()).type_().getText();
+		}
+
 		enterMethodDeclaration(fullClassMethodName(list), ctx, typeName);
 	}
 
@@ -512,8 +511,8 @@ public class CSharpReader extends CSharpParserBaseListener {
 	public void exitMethod_declaration(CSharpParser.Method_declarationContext ctx) {
 		exitMethodDeclaration(false);
 	}
-        
-        @Override
+
+	@Override
 	public void enterLambda_expression(CSharpParser.Lambda_expressionContext ctx) {
 		DeadlockFunction method = new DeadlockFunction("_unidentified_"  + RunnableMethods.size(), defaultClass, methodStack.isEmpty() ? null : methodStack.peek(), currentAbstract);
 		Pair<Integer, Pair<List<Integer>, Map<Long, Integer>>> retParamTypes = getLambdaMethodMetadata(ctx, "void", method);
@@ -524,8 +523,8 @@ public class CSharpReader extends CSharpParserBaseListener {
 		methodCallCountStack.add(runningMethodCallCount.get());
 		runningMethodCallCount.set(0);
 	}
-        
-        @Override
+
+	@Override
 	public void exitLambda_expression(CSharpParser.Lambda_expressionContext ctx) {
 		exitMethodDeclaration(true);
 	}
@@ -585,30 +584,30 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 		processVariableDeclarations(true, ((CSharpParser.Typed_member_declarationContext) ctx.getParent()).type_().getText(), vdNames);
 	}
-        
-        @Override
+
+	@Override
 	public void enterEmbedded_statement(CSharpParser.Embedded_statementContext ctx) {
-                if (ctx.simple_embedded_statement() != null) {
-                        if (ctx.simple_embedded_statement() instanceof CSharpParser.ForeachStatementContext) {
-                                CSharpParser.ForeachStatementContext fctx = (CSharpParser.ForeachStatementContext) ctx.simple_embedded_statement();
-                                if (fctx.local_variable_type().type_() != null) {
-                                        processVariableDeclarations(true, fctx.local_variable_type().type_().getText(), Collections.singletonList(fctx.identifier().IDENTIFIER().getText()));
-                                }
-                        } else if (ctx.simple_embedded_statement() instanceof CSharpParser.LockStatementContext) {
-                                String syncLockName = DeadlockGraphMaker.getSyncLockName(((CSharpParser.LockStatementContext) ctx.simple_embedded_statement()).expression().getText(), methodStack.peek().getId());
-                                methodStack.peek().addMethodCall(generateSyncLockExpression(syncLockName, true));
-                        }
-                }
+		if (ctx.simple_embedded_statement() != null) {
+			if (ctx.simple_embedded_statement() instanceof CSharpParser.ForeachStatementContext) {
+				CSharpParser.ForeachStatementContext fctx = (CSharpParser.ForeachStatementContext) ctx.simple_embedded_statement();
+				if (fctx.local_variable_type().type_() != null) {
+					processVariableDeclarations(true, fctx.local_variable_type().type_().getText(), Collections.singletonList(fctx.identifier().IDENTIFIER().getText()));
+				}
+			} else if (ctx.simple_embedded_statement() instanceof CSharpParser.LockStatementContext) {
+				String syncLockName = DeadlockGraphMaker.getSyncLockName(((CSharpParser.LockStatementContext) ctx.simple_embedded_statement()).expression().getText(), methodStack.peek().getId());
+				methodStack.peek().addMethodCall(generateSyncLockExpression(syncLockName, true));
+			}
+		}
 	}
-        
-        @Override
+
+	@Override
 	public void exitEmbedded_statement(CSharpParser.Embedded_statementContext ctx) {
-                if (ctx.simple_embedded_statement() != null) {
-                        if (ctx.simple_embedded_statement() instanceof CSharpParser.LockStatementContext) {
-                                String syncLockName = DeadlockGraphMaker.getSyncLockName(((CSharpParser.LockStatementContext) ctx.simple_embedded_statement()).expression().getText(), methodStack.peek().getId());
-                                methodStack.peek().addMethodCall(generateSyncLockExpression(syncLockName, false));
-                        }
-                }
+		if (ctx.simple_embedded_statement() != null) {
+			if (ctx.simple_embedded_statement() instanceof CSharpParser.LockStatementContext) {
+				String syncLockName = DeadlockGraphMaker.getSyncLockName(((CSharpParser.LockStatementContext) ctx.simple_embedded_statement()).expression().getText(), methodStack.peek().getId());
+				methodStack.peek().addMethodCall(generateSyncLockExpression(syncLockName, false));
+			}
+		}
 	}
 
 	@Override
@@ -710,15 +709,15 @@ public class CSharpReader extends CSharpParserBaseListener {
 			addMethodFromExpression(ctx);
 		}
 	}
-        
+
 	private static Pair<Integer, Pair<List<Integer>, Map<Long, Integer>>> getLambdaMethodMetadata(CSharpParser.Lambda_expressionContext ctx, String retTypeName, DeadlockFunction method) {
 		Integer type = getTypeId(retTypeName, currentCompleteFileClassName);
 		Pair<List<Integer>, Map<Long, Integer>> params = getLambdaMethodParameterTypes(ctx.anonymous_function_signature(), method);
 
 		return new Pair<>(type, params);
 	}
-        
-        private static Pair<Integer, Pair<List<Integer>, Map<Long, Integer>>> getMethodMetadata(CSharpParser.Method_declarationContext ctx, String retTypeName, DeadlockFunction method) {
+
+	private static Pair<Integer, Pair<List<Integer>, Map<Long, Integer>>> getMethodMetadata(CSharpParser.Method_declarationContext ctx, String retTypeName, DeadlockFunction method) {
 		Integer type = getTypeId(retTypeName, currentCompleteFileClassName);
 		Pair<List<Integer>, Map<Long, Integer>> params = getMethodParameterTypes(ctx.formal_parameter_list(), method);
 
@@ -731,15 +730,15 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 		return new Pair<>(type, params);
 	}
-        
-        private static void addMethodParameter(String typeName, String typeText, String nameText, DeadlockFunction method, Map<Long, Integer> params, List<Integer> pTypes) {
-                String tt = getFullTypeText(typeName, typeText);
-                int typeId = getTypeId(tt, currentCompleteFileClassName);
-                pTypes.add(typeId);
 
-                Long val = method.addLocalVariable(typeId, nameText);
-                params.put(val, typeId);
-        }
+	private static void addMethodParameter(String typeName, String typeText, String nameText, DeadlockFunction method, Map<Long, Integer> params, List<Integer> pTypes) {
+		String tt = getFullTypeText(typeName, typeText);
+		int typeId = getTypeId(tt, currentCompleteFileClassName);
+		pTypes.add(typeId);
+
+		Long val = method.addLocalVariable(typeId, nameText);
+		params.put(val, typeId);
+	}
 
 	private static Pair<List<Integer>, Map<Long, Integer>> getMethodParameterTypes(CSharpParser.Formal_parameter_listContext ctx, DeadlockFunction method) {
 		Map<Long, Integer> params = new HashMap<>();
@@ -747,45 +746,45 @@ public class CSharpReader extends CSharpParserBaseListener {
 
 		if(ctx != null) {
 			CSharpParser.Parameter_arrayContext aCtx = ctx.parameter_array();
-                        if (aCtx != null) {
-                                while(aCtx != null) {
-                                        String typeText = aCtx.array_type().getText();
-                                        String nameText = aCtx.identifier().getText();
+			if (aCtx != null) {
+				while(aCtx != null) {
+					String typeText = aCtx.array_type().getText();
+					String nameText = aCtx.identifier().getText();
 
-                                        addMethodParameter(aCtx.array_type().base_type().getText(), typeText, nameText, method, params, pTypes);
-                                        
-                                        aCtx = ctx.parameter_array();
-                                }
-                        } else {
-                                for (CSharpParser.Fixed_parameterContext paramCtx : ctx.fixed_parameters().fixed_parameter()) {
-                                        String typeText = paramCtx.arg_declaration().type_().getText();
-                                        String nameText = paramCtx.arg_declaration().identifier().getText();
-                                        
-                                        addMethodParameter(paramCtx.arg_declaration().type_().base_type().getText(), typeText, nameText, method, params, pTypes);
-                                }
-                        }
+					addMethodParameter(aCtx.array_type().base_type().getText(), typeText, nameText, method, params, pTypes);
+
+					aCtx = ctx.parameter_array();
+				}
+			} else {
+				for (CSharpParser.Fixed_parameterContext paramCtx : ctx.fixed_parameters().fixed_parameter()) {
+					String typeText = paramCtx.arg_declaration().type_().getText();
+					String nameText = paramCtx.arg_declaration().identifier().getText();
+
+					addMethodParameter(paramCtx.arg_declaration().type_().base_type().getText(), typeText, nameText, method, params, pTypes);
+				}
+			}
 		}
 
 		return new Pair<>(pTypes, params);
 	}
-        
-        private static Pair<List<Integer>, Map<Long, Integer>> getLambdaMethodParameterTypes(CSharpParser.Anonymous_function_signatureContext ctx, DeadlockFunction method) {
+
+	private static Pair<List<Integer>, Map<Long, Integer>> getLambdaMethodParameterTypes(CSharpParser.Anonymous_function_signatureContext ctx, DeadlockFunction method) {
 		Map<Long, Integer> params = new HashMap<>();
 		List<Integer> pTypes = new LinkedList<>();
 
-                CSharpParser.Implicit_anonymous_function_parameter_listContext aCtx = ctx.implicit_anonymous_function_parameter_list();
-                if (aCtx != null) {
-                        for (CSharpParser.IdentifierContext idCtx : aCtx.identifier()) {
-                                addMethodParameter("Object", "Object", idCtx.IDENTIFIER().getText(), method, params, pTypes);
-                        }
-                } else {
-                        CSharpParser.Explicit_anonymous_function_parameter_listContext bCtx = ctx.explicit_anonymous_function_parameter_list();
-                        if (bCtx != null) {
-                                for (CSharpParser.Explicit_anonymous_function_parameterContext apCtx : bCtx.explicit_anonymous_function_parameter()) {
-                                        addMethodParameter(apCtx.type_().base_type().getText(), apCtx.type_().getText(), apCtx.identifier().IDENTIFIER().getText(), method, params, pTypes);
-                                }
-                        }
-                }
+		CSharpParser.Implicit_anonymous_function_parameter_listContext aCtx = ctx.implicit_anonymous_function_parameter_list();
+		if (aCtx != null) {
+			for (CSharpParser.IdentifierContext idCtx : aCtx.identifier()) {
+				addMethodParameter("Object", "Object", idCtx.IDENTIFIER().getText(), method, params, pTypes);
+			}
+		} else {
+			CSharpParser.Explicit_anonymous_function_parameter_listContext bCtx = ctx.explicit_anonymous_function_parameter_list();
+			if (bCtx != null) {
+				for (CSharpParser.Explicit_anonymous_function_parameterContext apCtx : bCtx.explicit_anonymous_function_parameter()) {
+					addMethodParameter(apCtx.type_().base_type().getText(), apCtx.type_().getText(), apCtx.identifier().IDENTIFIER().getText(), method, params, pTypes);
+				}
+			}
+		}
 
 		return new Pair<>(pTypes, params);
 	}
@@ -932,8 +931,8 @@ public class CSharpReader extends CSharpParserBaseListener {
 		} else {
 			Locks.put(lockName, instanceNewLock(lockName));
 		}
-                
-                mdc.addFieldVariable(0, name);
+
+		mdc.addFieldVariable(0, name);
 	}
 
 	public static DeadlockLock instanceNewLock(String lockName) {
@@ -980,26 +979,26 @@ public class CSharpReader extends CSharpParserBaseListener {
 	}
 
 	private static void parseImportClass(DeadlockClass mdc) {
-                for(String s : mdc.getImportNames()) {
-                        List<Pair<String, String>> p = new LinkedList<>();
-                        
-                        String packName = DeadlockStorage.getPublicPackageName(s + ".");
-                        if (packName != null) {
-                                while (packName != null) {
-                                        p.add(new Pair<>(packName, "*"));
-                                        
-                                        int idx = s.lastIndexOf(".");
-                                        if (idx < 0) break;
-                                        
-                                        s = s.substring(0, idx);
-                                        
-                                        packName = DeadlockStorage.getPublicPackageName(s + ".");
-                                }
-                        } else {
-                                Pair<String, String> ps = DeadlockStorage.locateClassPath(s);
-                                if (ps != null) p.add(ps);
-                        }
-                        
+		for(String s : mdc.getImportNames()) {
+			List<Pair<String, String>> p = new LinkedList<>();
+
+			String packName = DeadlockStorage.getPublicPackageName(s + ".");
+			if (packName != null) {
+				while (packName != null) {
+					p.add(new Pair<>(packName, "*"));
+
+					int idx = s.lastIndexOf(".");
+					if (idx < 0) break;
+
+					s = s.substring(0, idx);
+
+					packName = DeadlockStorage.getPublicPackageName(s + ".");
+				}
+			} else {
+				Pair<String, String> ps = DeadlockStorage.locateClassPath(s);
+				if (ps != null) p.add(ps);
+			}
+
 			for (Pair<String, String> ps : p) {
 				String packageName = ps.left;
 				String className = ps.right;
@@ -1512,7 +1511,7 @@ public class CSharpReader extends CSharpParserBaseListener {
                 for(Entry<Integer, Pair<String, String>> v : volatileDataTypes.entrySet()) {
                         System.out.println(v.getKey() + " : " + v.getValue());
                 }
-                
+
                 for(Map<String, DeadlockClass> o : PublicClasses.values()) {
                         for(DeadlockClass mdc : o.values()) {
                                 System.out.println(mdc);
@@ -1524,8 +1523,8 @@ public class CSharpReader extends CSharpParserBaseListener {
                                 System.out.println(mdc);
                         }
                 }
-                */
-                
+		 */
+
 		parseDataTypes();
 		fetchDataType("Set<Object>", null);
 
@@ -1533,7 +1532,7 @@ public class CSharpReader extends CSharpParserBaseListener {
 		generateReflectedDataTypes();
 
 		solveRunnableFunctions();
-                
-                return storage;
+
+		return storage;
 	}
 }

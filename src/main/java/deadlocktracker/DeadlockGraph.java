@@ -12,7 +12,6 @@
 package deadlocktracker;
 
 import java.util.Map;
-
 import deadlocktracker.containers.DeadlockFunction;
 import deadlocktracker.graph.DeadlockGraphMethod;
 

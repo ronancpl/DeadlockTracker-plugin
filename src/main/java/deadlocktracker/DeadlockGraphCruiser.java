@@ -24,7 +24,6 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import deadlocktracker.containers.DeadlockEntry;
 import deadlocktracker.containers.DeadlockFunction;
 import deadlocktracker.containers.DeadlockStorage;
@@ -46,6 +45,7 @@ public class DeadlockGraphCruiser {
 		Set<Integer> acquiredLocks = new HashSet<>();
 		List<Integer> seqLocks = new LinkedList<>();
 		List<Integer> seqAcqLocks = new ArrayList<>();
+		Integer startAt;
 
 	}
 
@@ -200,6 +200,7 @@ public class DeadlockGraphCruiser {
 
 					FunctionPathNode ftrace = new FunctionPathNode();
 					ftrace.seqLocks.addAll(uptrace.seqLocks);
+					ftrace.startAt = ftrace.seqLocks.size();
 
 					for (DeadlockGraphEntry e : g.get(mdf).getEntryList()) {
 						for (DeadlockGraphNode n : e.getGraphEntryPoints()) {
@@ -247,13 +248,14 @@ public class DeadlockGraphCruiser {
 		prepareFunctionMilestones();
 
 		Map<DeadlockFunction, DeadlockGraphMethod> functionGraph = graph.getFunctionGraph();
-                Set<DeadlockFunction> runMethods = storage.getRunnableMethods();
-                
+		Set<DeadlockFunction> runMethods = storage.getRunnableMethods();
+
 		for (Entry<DeadlockFunction, DeadlockGraphMethod> e : functionGraph.entrySet()) {
 			DeadlockFunction f = e.getKey();
-                        if (isStartingFunction(f) || runMethods.contains(f)) {
+			if (isStartingFunction(f) || runMethods.contains(f)) {
 				//System.out.println("Reading " + DeadlockStorage.getCanonClassName(f.getSourceClass()) + " >> " + f.getName());
 				FunctionPathNode trace = new FunctionPathNode();
+				trace.startAt = 0;
 				runSourceGraphFunction(f, functionGraph, trace);
 			}
 		}
@@ -400,11 +402,13 @@ public class DeadlockGraphCruiser {
 		dumpLockDependency(LockNames);
 		makeRemissiveIndexLockFunctions();
 		detectDeadlocksInLockDependencies();
+		//dumpDeadlockFunctions(LockNames);
 	}
 
 	private void createFunctionAcquiredLocks(DeadlockGraph graph) {
 		for(DeadlockFunction f : graph.getFunctionIds().keySet()) {
 			FunctionPathNode ftrace = new FunctionPathNode();
+			ftrace.startAt = 0;
 			functionLocks.put(f, ftrace);
 		}
 	}
@@ -423,6 +427,37 @@ public class DeadlockGraphCruiser {
 			System.out.println(s);
 		}
 		System.out.println();
+	}
+
+	private static void dumpDeadlockFunctions(Map<Integer, String> LockNames) {
+		System.out.println();
+
+		Set<Integer> locks = new HashSet<>();
+		for (DeadlockEntry e : deadlocks) {
+			locks.add(e.getLockId1());
+			locks.add(e.getLockId2());
+		}
+
+		System.out.println("Dead Lock ids:");
+		for (Integer i : locks) {
+			System.out.println(LockNames.get(i) + ":" + i);
+		}
+		System.out.println();
+
+		System.out.println("Function acquired Locks:");
+		Set<DeadlockFunction> functions = new HashSet<>();
+		for (Entry<DeadlockFunction, FunctionPathNode> e : functionLocks.entrySet()) {
+			for (Integer i : locks) {
+				if (e.getValue().acquiredLocks.contains(i)) {
+					functions.add(e.getKey());
+				}
+			}
+		}
+		System.out.println();
+
+		for (DeadlockFunction f : functions) {
+			System.out.println(f + " >> " + functionLocks.get(f).seqAcqLocks.subList(functionLocks.get(f).startAt, functionLocks.get(f).seqAcqLocks.size()) + "," + functionMilestones.get(f));
+		}
 	}
 
 	public Set<DeadlockEntry> runSourceGraph(DeadlockGraph graph, DeadlockStorage storage, Map<Integer, String> LockNames) {
