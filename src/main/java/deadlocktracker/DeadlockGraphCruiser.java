@@ -13,6 +13,7 @@ package deadlocktracker;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -45,6 +46,7 @@ public class DeadlockGraphCruiser {
 		Set<Integer> acquiredLocks = new HashSet<>();
 		List<Integer> seqLocks = new LinkedList<>();
 		List<Integer> seqAcqLocks = new ArrayList<>();
+		List<Integer> seqIntAcqLocks;
 		Integer startAt;
 
 	}
@@ -125,6 +127,12 @@ public class DeadlockGraphCruiser {
 
 			acqLocks.clear();
 			acqLocks.addAll(trace.seqAcqLocks);
+
+			if (uptrace.startAt < acqLocks.size()) {
+				functionLocks.get(f).seqIntAcqLocks = acqLocks.subList(uptrace.startAt, acqLocks.size());
+			} else {
+				functionLocks.get(f).seqIntAcqLocks = Collections.emptyList();
+			}
 		}
 
 		List<Integer> list = new ArrayList<>(trace.seqLocks);
@@ -456,7 +464,7 @@ public class DeadlockGraphCruiser {
 		System.out.println();
 
 		for (DeadlockFunction f : functions) {
-			System.out.println(f + " >> " + functionLocks.get(f).seqAcqLocks.subList(functionLocks.get(f).startAt, functionLocks.get(f).seqAcqLocks.size()) + "," + functionMilestones.get(f));
+			System.out.println(f + " : " + functionLocks.get(f).seqIntAcqLocks + "," + functionMilestones.get(f));
 		}
 	}
 
